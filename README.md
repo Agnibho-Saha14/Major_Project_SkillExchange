@@ -1,6 +1,3 @@
-Perfect 👍 here’s a **ready-to-paste `README.md` file** for your project. Just copy this into a `README.md` in your repo root.
-
----
 
 # 🌟 Skill Exchange
 
