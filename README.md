@@ -53,7 +53,6 @@ Built with **React 19, Vite, TailwindCSS v4, Radix UI, and Clerk Authentication*
 
    ```env
    VITE_CLERK_PUBLISHABLE_KEY=your-clerk-publishable-key
-   VITE_CLERK_SECRET_KEY=your-clerk-secret-key
    ```
 
 4. **Start the development server**
