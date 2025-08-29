@@ -2,6 +2,7 @@ import { useParams, Link } from "react-router-dom"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { BookOpen,IndianRupee, Clock, Star } from "lucide-react"
+import Navbar from "@/components/Navbar"
 
 const mockSkills = [
   { id: "1", title: "Driving Lessons", instructor: "Rajesh Kumar", price: 3500, rating: 4.9, duration: "2 weeks", description: "Learn driving.", category: "Driving" },
@@ -15,21 +16,7 @@ export default function SkillDetailPage() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <header className="bg-white shadow-sm border-b">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center h-16">
-            <div className="flex items-center space-x-2">
-              <BookOpen className="h-8 w-8 text-indigo-600" />
-              <span className="text-2xl font-bold text-gray-900">SkillExchange</span>
-            </div>
-            <nav className="hidden md:flex space-x-8">
-              <Link to="/" className="text-gray-700 hover:text-indigo-600">Home</Link>
-              <Link to="/browse" className="text-gray-700 hover:text-indigo-600">Browse Skills</Link>
-              <Link to="/publish" className="text-gray-700 hover:text-indigo-600">Teach a Skill</Link>
-            </nav>
-          </div>
-        </div>
-      </header>
+      <Navbar/>
       <div className="max-w-4xl mx-auto p-8">
         <Card>
           <CardHeader><CardTitle>{skill.title}</CardTitle></CardHeader>
