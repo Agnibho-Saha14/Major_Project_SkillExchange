@@ -38,6 +38,7 @@ Built with **React 19, Vite, TailwindCSS v4, Radix UI, and Clerk Authentication*
    ```bash
    git clone https://github.com/Agnibho-Saha14/Major_Project_SkillExchange.git
    cd Major_Project_SkillExchange
+   cd client
    ```
 
 2. **Install dependencies**
@@ -48,7 +49,7 @@ Built with **React 19, Vite, TailwindCSS v4, Radix UI, and Clerk Authentication*
 
 3. **Set up environment variables**
 
-   Create a `.env.local` file in the root directory and add your Clerk keys:
+   Create a `.env` file in the root directory and add your Clerk keys:
 
    ```env
    VITE_CLERK_PUBLISHABLE_KEY=your-clerk-publishable-key
@@ -69,6 +70,7 @@ Built with **React 19, Vite, TailwindCSS v4, Radix UI, and Clerk Authentication*
 ## 📂 Project Structure
 
 ```
+client
 src/
 ├── components/        # Reusable UI components (ShadCN + Radix)
 │   └── ui/            # Button, Card, Tabs, etc.
