@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/badge"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { BookOpen, Search, Filter, Star, Clock, DollarSign, Users } from "lucide-react"
 import { Link } from "react-router-dom"
+import Navbar from "@/components/Navbar"
 
 const categories = [
   "All","Programming","Design","Marketing","Music","Language","Fitness","Photography","Cooking",
@@ -45,21 +46,7 @@ export default function BrowseSkillsPage() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <header className="bg-white shadow-sm border-b">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center h-16">
-            <div className="flex items-center space-x-2">
-              <BookOpen className="h-8 w-8 text-indigo-600" />
-              <span className="text-2xl font-bold text-gray-900">SkillExchange</span>
-            </div>
-            <nav className="hidden md:flex space-x-8">
-              <Link to="/" className="text-gray-700 hover:text-indigo-600">Home</Link>
-              <Link to="/publish" className="text-gray-700 hover:text-indigo-600">Teach a Skill</Link>
-              <Link to="/dashboard" className="text-gray-700 hover:text-indigo-600">Dashboard</Link>
-            </nav>
-          </div>
-        </div>
-      </header>
+      <Navbar/>
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="mb-8">
           <div className="flex flex-col md:flex-row gap-4 mb-6">
