@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Textarea } from "@/components/ui/textarea"
 import { BookOpen, IndianRupee, Clock, Star, User, Calendar, Award, CheckCircle, MessageSquare, ArrowLeft, Loader2, AlertCircle } from "lucide-react"
-
+import { useNavigate } from "react-router-dom"
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api'
 
 
@@ -11,6 +11,7 @@ const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api'
 function StarRating({ rating, size = "md", showNumber = true }) {
   const stars = []
   const fullStars = Math.floor(rating)
+  
   const hasHalfStar = rating % 1 !== 0
 
   for (let i = 0; i < fullStars; i++) {
@@ -89,40 +90,45 @@ function RatingSection({ skillId, averageRating, totalRatings, onRatingUpdate })
   const [comment, setComment] = useState("")
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [hasRated, setHasRated] = useState(false)
-
+  const navigate = useNavigate();
   const handleSubmitRating = async () => {
-    if (userRating === 0) return
+  if (userRating === 0) return
 
-    setIsSubmitting(true)
-    try {
-      const response = await fetch(`${API_BASE_URL}/skills/${skillId}/rate`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          rating: userRating,
-          comment: comment.trim()
-        }),
-      })
+  setIsSubmitting(true)
+  try {
+    const response = await fetch(`${API_BASE_URL}/skills/${skillId}/rate`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        rating: userRating,
+        comment: comment.trim(),
+      }),
+    })
 
-      const result = await response.json()
+    const result = await response.json()
 
-      if (result.success) {
-        setHasRated(true)
-        setUserRating(0)
-        setComment("")
-        onRatingUpdate(result.data)
-      } else {
-        alert(result.message || 'Failed to submit rating')
-      }
-    } catch (error) {
-      console.error('Error submitting rating:', error)
-      alert('Failed to submit rating. Please try again.')
-    } finally {
-      setIsSubmitting(false)
+    if (result.success) {
+      setHasRated(true)
+      setUserRating(0)
+      setComment("")
+      onRatingUpdate(result.data)
+
+      // ✅ redirect only after success
+      navigate("/")
+    } else {
+      console.log()
+      alert(result.message || "Failed to submit rating")
     }
+  } catch (error) {
+    console.error("Error submitting rating:", error)
+    alert("Failed to submit rating. Please try again.")
+  } finally {
+    setIsSubmitting(false)
   }
+}
+
 
   return (
     <Card className="bg-white/80 backdrop-blur-sm border-0 shadow-lg">
@@ -176,12 +182,14 @@ function RatingSection({ skillId, averageRating, totalRatings, onRatingUpdate })
               <Button
                 onClick={handleSubmitRating}
                 disabled={userRating === 0 || isSubmitting}
+
                 className="w-full bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 disabled:opacity-50"
               >
                 {isSubmitting ? (
                   <>
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                     Submitting...
+                    
                   </>
                 ) : (
                   'Submit Rating'
@@ -271,7 +279,6 @@ export default function SkillDetailPage() {
     
     return (
       <div className="flex items-center text-green-600">
-        <IndianRupee className="h-5 w-5 mr-1" />
         <span className="text-xl font-bold">₹{price}</span>
         <span className="text-sm ml-1">/{priceType}</span>
       </div>

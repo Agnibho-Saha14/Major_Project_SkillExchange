@@ -105,7 +105,7 @@ function SkillCard({ skill }) {
 
         <div className="flex items-center justify-between pt-4 border-t border-gray-200">
           <div className="flex items-center">
-            <IndianRupee className="h-5 w-5 mr-1 text-green-600" />
+            
             {formatPrice(skill.price, skill.priceType, skill.paymentOptions)}
           </div>
           <a href={`/skills/${skill._id}`}>
