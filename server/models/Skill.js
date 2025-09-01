@@ -1,0 +1,60 @@
+const mongoose = require('mongoose');
+
+const ratingSchema = new mongoose.Schema(
+  {
+    rating: { type: Number, required: true, min: 1, max: 5 },
+    comment: { type: String, default: '' },
+    userId: { type: String, default: 'anonymous' },
+    createdAt: { type: Date, default: Date.now }
+  },
+  { _id: false }
+);
+
+const teachingFormatSchema = new mongoose.Schema(
+  {
+    onlineSessions: { type: Boolean, default: false },
+    inPersonSessions: { type: Boolean, default: false },
+    flexibleSchedule: { type: Boolean, default: false },
+    provideMaterials: { type: Boolean, default: false }
+  },
+  { _id: false }
+);
+
+const skillSchema = new mongoose.Schema(
+  {
+    title: { type: String, required: true, trim: true },
+    instructor: { type: String, required: true, trim: true },
+    category: { type: String, required: true, trim: true },
+    level: { type: String, required: true, enum: ['Beginner', 'Intermediate', 'Advanced'] },
+    duration: { type: String, required: true, trim: true },
+    timePerWeek: { type: String, required: true, trim: true },
+    price: { type: Number, default: 0 },
+    priceType: { type: String, enum: ['hourly', 'weekly', 'course'], default: 'hourly' },
+    paymentOptions: { type: String, required: true, enum: ['paid', 'exchange', 'both'] },
+    description: { type: String, required: true },
+    skills: { type: [String], default: [] },
+    prerequisites: { type: String, default: '' },
+    learningOutcomes: { type: String, default: '' },
+    teachingFormat: { type: teachingFormatSchema, default: () => ({}) },
+    status: { type: String, enum: ['draft', 'published', 'inactive'], default: 'draft' },
+    ratings: { type: [ratingSchema], default: [] },
+    averageRating: { type: Number, default: 0, min: 0, max: 5 },
+    totalRatings: { type: Number, default: 0, min: 0 }
+  },
+  { timestamps: true }
+);
+
+// Instance method to compute average rating
+skillSchema.methods.calculateAverageRating = function () {
+  if (!this.ratings || this.ratings.length === 0) {
+    this.averageRating = 0;
+    this.totalRatings = 0;
+  } else {
+    const sum = this.ratings.reduce((acc, r) => acc + r.rating, 0);
+    this.averageRating = Math.round((sum / this.ratings.length) * 10) / 10;
+    this.totalRatings = this.ratings.length;
+  }
+};
+
+const Skill = mongoose.model('Skill', skillSchema);
+module.exports = Skill;
