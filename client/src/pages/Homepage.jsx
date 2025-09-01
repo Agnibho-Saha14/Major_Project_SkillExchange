@@ -1,7 +1,7 @@
 import { Button } from "@/components/ui/button"
 import { Search, ArrowRight, BookOpen } from "lucide-react"
 import { Link } from "react-router-dom"
-import { UserPostedSkills } from "./UserPostedSkills"
+import  UserPostedSkills  from "./UserPostedSkills"
 import Navbar from "../components/Navbar"
 
 export default function HomePage() {

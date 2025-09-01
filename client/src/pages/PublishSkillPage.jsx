@@ -1,5 +1,5 @@
 import { useState } from "react"
-import { useParams, Link } from "react-router-dom"
+import { useNavigate } from "react-router-dom"   // ✅ Import navigate
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
@@ -8,11 +8,32 @@ import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { Checkbox } from "@/components/ui/checkbox"
-import { BookOpen, Plus, X } from "lucide-react"
-import Navbar from "../components/Navbar"
+import { BookOpen, Plus, X, CheckCircle, AlertCircle, Loader2 } from "lucide-react"
+import Navbar from "@/components/Navbar"
 
+// API Configuration
+const API_BASE_URL = import.meta.env.REACT_APP_API_URL || 'http://localhost:5000/api'
+
+function Toast({ message, type, onClose }) {
+  if (!message) return null
+  
+  return (
+    <div className={`fixed top-4 right-4 z-50 p-4 rounded-lg shadow-lg ${
+      type === 'success' ? 'bg-green-500 text-white' : 'bg-red-500 text-white'
+    }`}>
+      <div className="flex items-center space-x-2">
+        {type === 'success' ? <CheckCircle className="h-5 w-5" /> : <AlertCircle className="h-5 w-5" />}
+        <span>{message}</span>
+        <button onClick={onClose} className="ml-2 hover:opacity-80">
+          <X className="h-4 w-4" />
+        </button>
+      </div>
+    </div>
+  )
+}
 
 export default function PublishSkillPage() {
+  const navigate = useNavigate()
   const [form, setForm] = useState({
     title: "", 
     instructor: "", 
@@ -36,6 +57,14 @@ export default function PublishSkillPage() {
   })
 
   const [skillInput, setSkillInput] = useState("")
+  const [isLoading, setIsLoading] = useState(false)
+  const [isDraftLoading, setIsDraftLoading] = useState(false)
+  const [toast, setToast] = useState({ message: '', type: '' })
+
+  const showToast = (message, type) => {
+    setToast({ message, type })
+    setTimeout(() => setToast({ message: '', type: '' }), 5000)
+  }
 
   const handleChange = (e) => {
     setForm({ ...form, [e.target.name]: e.target.value })
@@ -62,15 +91,117 @@ export default function PublishSkillPage() {
     })
   }
 
+  // API call function
+const submitSkill = async (endpoint, successMessage, setLoadingState) => {
+  setLoadingState(true)
+  try {
+    const skillData = {
+      ...form,
+      status: endpoint.includes('draft') ? 'draft' : 'published'
+    }
+
+    if (form.paymentOptions === 'paid' || form.paymentOptions === 'both') {
+      skillData.price = form.price ? parseFloat(form.price) : 0
+      skillData.priceType = form.priceType
+    } else {
+      skillData.price = 0
+      delete skillData.priceType
+    }
+
+    console.log('Sending data to backend:', skillData) // Debug log
+
+    const response = await fetch(`${API_BASE_URL}${endpoint}`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(skillData),
+    })
+
+    const result = await response.json()
+
+    if (result.success) {
+      showToast(successMessage, 'success')
+      setTimeout(() => {
+    navigate('/')
+  }, 2000)   
+      if (endpoint === '/skills') {
+        setForm({
+          title: "", 
+          instructor: "", 
+          category: "", 
+          level: "", 
+          duration: "", 
+          timePerWeek: "",
+          price: "", 
+          priceType: "", 
+          paymentOptions: "paid", 
+          description: "", 
+          skills: [],
+          prerequisites: "",
+          learningOutcomes: "",
+          teachingFormat: {
+            onlineSessions: false,
+            inPersonSessions: false,
+            flexibleSchedule: false,
+            provideMaterials: false
+          }
+        })
+        setSkillInput("")
+      }
+    } else {
+      console.error('Backend error:', result) // Debug log
+      showToast(result.message || 'An error occurred', 'error')
+    }
+  } catch (error) {
+    console.error('Network error:', error)
+    showToast('Failed to connect to server. Please try again.', 'error')
+  } finally {
+    setLoadingState(false)
+  }
+}
+
   const handleSubmit = (e) => {
     e.preventDefault()
-    alert("Skill submitted: " + JSON.stringify(form, null, 2))
+    
+    // Validate required fields
+    const requiredFields = ['title', 'instructor', 'category', 'level', 'duration', 'timePerWeek', 'description']
+    const emptyFields = requiredFields.filter(field => !form[field].trim())
+    
+    if (emptyFields.length > 0) {
+      showToast(`Please fill in all required fields: ${emptyFields.join(', ')}`, 'error')
+      return
+    }
+
+    // Validate payment fields if paid option is selected
+    if ((form.paymentOptions === 'paid' || form.paymentOptions === 'both') && (!form.price || !form.priceType)) {
+      showToast('Please fill in price and price type for paid options', 'error')
+      return
+    }
+
+    // Validate exchange skills if exchange option is selected
+    if ((form.paymentOptions === 'exchange' || form.paymentOptions === 'both') && form.skills.length === 0) {
+      showToast('Please add at least one skill you want to learn for exchange options', 'error')
+      return
+    }
+
+    submitSkill('/skills', 'Skill published successfully!', setIsLoading)
+  }
+
+  const handleSaveDraft = () => {
+    submitSkill('/skills/draft', 'Skill saved as draft successfully!', setIsDraftLoading)
   }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-white to-purple-50">
+      <Toast 
+        message={toast.message} 
+        type={toast.type} 
+        onClose={() => setToast({ message: '', type: '' })} 
+      />
+
       {/* Header */}
-      <Navbar/>
+      <Navbar />
 
       {/* Form */}
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
@@ -195,6 +326,8 @@ export default function PublishSkillPage() {
                         value={form.price} 
                         onChange={handleChange} 
                         className="h-11 rounded-xl border-2 border-green-200 focus:border-green-500"
+                        min="0"
+                        step="0.01"
                       />
                       <Select value={form.priceType} onValueChange={(v)=>setForm({...form,priceType:v})}>
                         <SelectTrigger className="h-11 rounded-xl border-2 border-green-200 focus:border-green-500 bg-white">
@@ -340,16 +473,33 @@ export default function PublishSkillPage() {
               <div className="flex justify-end space-x-4 pt-6">
                 <Button 
                   type="button" 
+                  onClick={handleSaveDraft}
+                  disabled={isDraftLoading}
                   variant="outline" 
-                  className="px-8 py-3 text-base rounded-xl border-2 border-gray-300 hover:bg-gray-50 transition-colors"
+                  className="px-8 py-3 text-base rounded-xl border-2 border-gray-300 hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  Save as Draft
+                  {isDraftLoading ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Saving...
+                    </>
+                  ) : (
+                    'Save as Draft'
+                  )}
                 </Button>
                 <Button 
                   type="submit"
-                  className="px-8 py-3 text-base rounded-xl bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white font-semibold shadow-lg hover:shadow-xl transition-all"
+                  disabled={isLoading}
+                  className="px-8 py-3 text-base rounded-xl bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white font-semibold shadow-lg hover:shadow-xl transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  Publish Skill
+                  {isLoading ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Publishing...
+                    </>
+                  ) : (
+                    'Publish Skill'
+                  )}
                 </Button>
               </div>
             </form>

@@ -18,7 +18,7 @@ export default function App() {
         <Route path="/browse" element={<BrowseSkillsPage />} />
         <Route path="/publish" element={<PublishSkillPage />} />
         <Route path="/dashboard" element={<DashboardPage />} />
-        <Route path="/skill/:id" element={<SkillDetailPage />} />
+        <Route path="/skills/:id" element={<SkillDetailPage />} />
         <Route path="/login" element={<Login/>} />
         <Route path="/signup" element={<Signup/>} />
 
