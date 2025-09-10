@@ -1,5 +1,6 @@
 import { useState } from "react"
-import { useNavigate } from "react-router-dom"   // ✅ Import navigate
+import { useNavigate } from "react-router-dom"
+import { useUser } from "@clerk/clerk-react" // ⚠️ Add this import
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
@@ -16,7 +17,7 @@ const API_BASE_URL = import.meta.env.REACT_APP_API_URL || 'http://localhost:5000
 
 function Toast({ message, type, onClose }) {
   if (!message) return null
-  
+
   return (
     <div className={`fixed top-4 right-4 z-50 p-4 rounded-lg shadow-lg ${
       type === 'success' ? 'bg-green-500 text-white' : 'bg-red-500 text-white'
@@ -34,6 +35,14 @@ function Toast({ message, type, onClose }) {
 
 export default function PublishSkillPage() {
   const navigate = useNavigate()
+  const { isSignedIn, isLoaded } = useUser(); // ⚠️ Use the useUser hook
+
+  // ⚠️ Add this redirection logic
+  if (isLoaded && !isSignedIn) {
+    navigate("/signup");
+    return null; // Return null to prevent rendering the form
+  }
+
   const [form, setForm] = useState({
     title: "", 
     instructor: "", 
@@ -124,7 +133,7 @@ const submitSkill = async (endpoint, successMessage, setLoadingState) => {
       showToast(successMessage, 'success')
       setTimeout(() => {
     navigate('/')
-  }, 2000)   
+  }, 2000)
       if (endpoint === '/skills') {
         setForm({
           title: "", 
@@ -191,7 +200,12 @@ const submitSkill = async (endpoint, successMessage, setLoadingState) => {
   const handleSaveDraft = () => {
     submitSkill('/skills/draft', 'Skill saved as draft successfully!', setIsDraftLoading)
   }
-
+  
+  if (isLoaded && !isSignedIn) {
+    // This will only be reached on the first render, but it's a good practice to handle it
+    return null;
+  }
+  
   return (
     <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-white to-purple-50">
       <Toast 

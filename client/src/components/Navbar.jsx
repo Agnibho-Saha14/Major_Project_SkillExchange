@@ -1,9 +1,13 @@
 import { Button } from "@/components/ui/button"
 import { Link } from "react-router-dom"
 import { BookOpen } from "lucide-react"
-import { UserButton } from "@clerk/clerk-react"
+import { UserButton, useUser } from "@clerk/clerk-react"
 
 export default function Navbar() {
+  const { isSignedIn } = useUser();
+  const teachLink = isSignedIn ? "/publish" : "/signup";
+  const dashboardLink = isSignedIn ? "/dashboard" : "/signup";
+
   return (
     <header className="bg-white shadow-sm border-b">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -17,14 +21,22 @@ export default function Navbar() {
           {/* Navigation Links */}
           <nav className="hidden md:flex space-x-8">
             <Link to="/browse" className="text-gray-700 hover:text-indigo-600 transition-colors">Browse Skills</Link>
-            <Link to="/publish" className="text-gray-700 hover:text-indigo-600 transition-colors">Teach a Skill</Link>
-            <Link to="/dashboard" className="text-gray-700 hover:text-indigo-600 transition-colors">Dashboard</Link>
+            <Link to={teachLink} className="text-gray-700 hover:text-indigo-600 transition-colors">Teach a Skill</Link>
+            <Link to={dashboardLink} className="text-gray-700 hover:text-indigo-600 transition-colors">Dashboard</Link>
           </nav>
 
           {/* Auth Buttons */}
           <div className="flex items-center space-x-4">
-            <Button variant="outline" asChild><Link to="/login">Login</Link></Button>
-            <Button asChild><Link to="/signup">Sign Up</Link></Button>
+            {!isSignedIn && (
+              <>
+                <Button variant="outline" asChild>
+                  <Link to="/login">Login</Link>
+                </Button>
+                <Button asChild>
+                  <Link to="/signup">Sign Up</Link>
+                </Button>
+              </>
+            )}
             <UserButton />
           </div>
         </div>
