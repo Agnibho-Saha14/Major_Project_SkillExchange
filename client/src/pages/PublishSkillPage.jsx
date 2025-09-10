@@ -1,5 +1,6 @@
-import { useState } from "react"
-import { useNavigate } from "react-router-dom"   // ✅ Import navigate
+import { useState, useEffect } from "react"
+import { useNavigate } from "react-router-dom"
+import { useAuth, useUser } from "@clerk/clerk-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
@@ -11,8 +12,7 @@ import { Checkbox } from "@/components/ui/checkbox"
 import { BookOpen, Plus, X, CheckCircle, AlertCircle, Loader2 } from "lucide-react"
 import Navbar from "@/components/Navbar"
 
-// API Configuration
-const API_BASE_URL = import.meta.env.REACT_APP_API_URL || 'http://localhost:5000/api'
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api'
 
 function Toast({ message, type, onClose }) {
   if (!message) return null
@@ -34,6 +34,17 @@ function Toast({ message, type, onClose }) {
 
 export default function PublishSkillPage() {
   const navigate = useNavigate()
+  const { isSignedIn, isLoaded } = useUser()
+  const { getToken } = useAuth()
+  
+  // ✅ Redirect logic moved to useEffect
+  useEffect(() => {
+    if (isLoaded && !isSignedIn) {
+      navigate("/signup");
+    }
+  }, [isLoaded, isSignedIn, navigate]);
+
+
   const [form, setForm] = useState({
     title: "", 
     instructor: "", 
@@ -108,12 +119,14 @@ const submitSkill = async (endpoint, successMessage, setLoadingState) => {
       delete skillData.priceType
     }
 
-    console.log('Sending data to backend:', skillData) // Debug log
+    // ✅ Get the session token
+    const token = await getToken();
 
     const response = await fetch(`${API_BASE_URL}${endpoint}`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}` // ✅ Add the token to the header
       },
       body: JSON.stringify(skillData),
     })
@@ -123,8 +136,8 @@ const submitSkill = async (endpoint, successMessage, setLoadingState) => {
     if (result.success) {
       showToast(successMessage, 'success')
       setTimeout(() => {
-    navigate('/')
-  }, 2000)   
+        navigate('/')
+      }, 2000)
       if (endpoint === '/skills') {
         setForm({
           title: "", 
@@ -150,7 +163,7 @@ const submitSkill = async (endpoint, successMessage, setLoadingState) => {
         setSkillInput("")
       }
     } else {
-      console.error('Backend error:', result) // Debug log
+      console.error('Backend error:', result)
       showToast(result.message || 'An error occurred', 'error')
     }
   } catch (error) {
@@ -191,7 +204,16 @@ const submitSkill = async (endpoint, successMessage, setLoadingState) => {
   const handleSaveDraft = () => {
     submitSkill('/skills/draft', 'Skill saved as draft successfully!', setIsDraftLoading)
   }
-
+  
+  if (!isLoaded) {
+    // This return handles the initial loading state before Clerk is ready
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <Loader2 className="h-12 w-12 animate-spin text-indigo-600" />
+      </div>
+    )
+  }
+  
   return (
     <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-white to-purple-50">
       <Toast 
