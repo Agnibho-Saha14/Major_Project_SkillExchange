@@ -22,6 +22,7 @@ const teachingFormatSchema = new mongoose.Schema(
 
 const skillSchema = new mongoose.Schema(
   {
+    ownerId: { type: String, required: true }, // <- important for ownership checks
     title: { type: String, required: true, trim: true },
     instructor: { type: String, required: true, trim: true },
     category: { type: String, required: true, trim: true },
@@ -39,12 +40,12 @@ const skillSchema = new mongoose.Schema(
     status: { type: String, enum: ['draft', 'published', 'inactive'], default: 'draft' },
     ratings: { type: [ratingSchema], default: [] },
     averageRating: { type: Number, default: 0, min: 0, max: 5 },
-    totalRatings: { type: Number, default: 0, min: 0 }
+    totalRatings: { type: Number, default: 0, min: 0 },
+    email: { type: String, required: false, default: '' } // not strictly required so create won't fail
   },
   { timestamps: true }
 );
 
-// Instance method to compute average rating
 skillSchema.methods.calculateAverageRating = function () {
   if (!this.ratings || this.ratings.length === 0) {
     this.averageRating = 0;
