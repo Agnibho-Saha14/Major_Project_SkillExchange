@@ -1,23 +1,39 @@
-import { useState, useEffect } from "react"
-import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Textarea } from "@/components/ui/textarea"
-import { BookOpen, IndianRupee, Clock, Star, User, Calendar, Award, CheckCircle, MessageSquare, ArrowLeft, Loader2, AlertCircle } from "lucide-react"
-import { useNavigate } from "react-router-dom"
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api'
+import React, { useEffect, useState } from "react";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Textarea } from "@/components/ui/textarea";
+import {
+  BookOpen,
+  IndianRupee,
+  Clock,
+  Star,
+  User,
+  Calendar,
+  Award,
+  CheckCircle,
+  MessageSquare,
+  ArrowLeft,
+  Loader2,
+  AlertCircle,
+  Mail
+} from "lucide-react";
+import { useNavigate } from "react-router-dom";
 
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
 
-
-function StarRating({ rating, size = "md", showNumber = true }) {
-  const stars = []
-  const fullStars = Math.floor(rating)
-  
-  const hasHalfStar = rating % 1 !== 0
+/* ---------- StarRating ---------- */
+function StarRating({ rating = 0, size = "md", showNumber = true }) {
+  const stars = [];
+  const fullStars = Math.floor(rating);
+  const hasHalfStar = rating % 1 !== 0;
 
   for (let i = 0; i < fullStars; i++) {
     stars.push(
-      <Star key={i} className={`${size === "sm" ? "h-4 w-4" : size === "lg" ? "h-6 w-6" : "h-5 w-5"} fill-yellow-400 text-yellow-400`} />
-    )
+      <Star
+        key={i}
+        className={`${size === "sm" ? "h-4 w-4" : size === "lg" ? "h-6 w-6" : "h-5 w-5"} fill-yellow-400 text-yellow-400`}
+      />
+    );
   }
 
   if (hasHalfStar) {
@@ -28,38 +44,39 @@ function StarRating({ rating, size = "md", showNumber = true }) {
           <Star className={`${size === "sm" ? "h-4 w-4" : size === "lg" ? "h-6 w-6" : "h-5 w-5"} fill-yellow-400 text-yellow-400`} />
         </div>
       </div>
-    )
+    );
   }
 
-  const emptyStars = 5 - Math.ceil(rating)
+  const emptyStars = 5 - Math.ceil(rating || 0);
   for (let i = 0; i < emptyStars; i++) {
     stars.push(
       <Star key={`empty-${i}`} className={`${size === "sm" ? "h-4 w-4" : size === "lg" ? "h-6 w-6" : "h-5 w-5"} text-gray-300`} />
-    )
+    );
   }
 
   return (
     <div className="flex items-center">
       {stars}
-      {showNumber && <span className="ml-2 text-gray-600 font-medium">{rating.toFixed(1)}</span>}
+      {showNumber && <span className="ml-2 text-gray-600 font-medium">{(rating || 0).toFixed(1)}</span>}
     </div>
-  )
+  );
 }
 
+/* ---------- InteractiveStarRating ---------- */
 function InteractiveStarRating({ rating, onRatingChange, size = "lg" }) {
-  const [hoverRating, setHoverRating] = useState(0)
+  const [hoverRating, setHoverRating] = useState(0);
 
   const handleClick = (value) => {
-    onRatingChange(value)
-  }
+    onRatingChange(value);
+  };
 
   const handleMouseEnter = (value) => {
-    setHoverRating(value)
-  }
+    setHoverRating(value);
+  };
 
   const handleMouseLeave = () => {
-    setHoverRating(0)
-  }
+    setHoverRating(0);
+  };
 
   return (
     <div className="flex items-center space-x-1">
@@ -82,53 +99,53 @@ function InteractiveStarRating({ rating, onRatingChange, size = "lg" }) {
         </button>
       ))}
     </div>
-  )
+  );
 }
 
+/* ---------- RatingSection ---------- */
 function RatingSection({ skillId, averageRating, totalRatings, onRatingUpdate }) {
-  const [userRating, setUserRating] = useState(0)
-  const [comment, setComment] = useState("")
-  const [isSubmitting, setIsSubmitting] = useState(false)
-  const [hasRated, setHasRated] = useState(false)
+  const [userRating, setUserRating] = useState(0);
+  const [comment, setComment] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [hasRated, setHasRated] = useState(false);
   const navigate = useNavigate();
+
   const handleSubmitRating = async () => {
-  if (userRating === 0) return
+    if (userRating === 0) return;
 
-  setIsSubmitting(true)
-  try {
-    const response = await fetch(`${API_BASE_URL}/skills/${skillId}/rate`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        rating: userRating,
-        comment: comment.trim(),
-      }),
-    })
+    setIsSubmitting(true);
+    try {
+      const response = await fetch(`${API_BASE_URL}/skills/${skillId}/rate`, {
+  method: "POST",
+  headers: {
+    "Content-Type": "application/json",
+  },
+  body: JSON.stringify({
+    rating: userRating,
+    comment: comment.trim(),
+  }),
+});
 
-    const result = await response.json()
+      const result = await response.json();
 
-    if (result.success) {
-      setHasRated(true)
-      setUserRating(0)
-      setComment("")
-      onRatingUpdate(result.data)
+      if (result.success) {
+        setHasRated(true);
+        setUserRating(0);
+        setComment("");
+        onRatingUpdate(result.data);
 
-      // ✅ redirect only after success
-      navigate("/")
-    } else {
-      console.log()
-      alert(result.message || "Failed to submit rating")
+        // redirect after success
+        navigate("/");
+      } else {
+        alert(result.message || "Failed to submit rating");
+      }
+    } catch (error) {
+      console.error("Error submitting rating:", error);
+      alert("Failed to submit rating. Please try again.");
+    } finally {
+      setIsSubmitting(false);
     }
-  } catch (error) {
-    console.error("Error submitting rating:", error)
-    alert("Failed to submit rating. Please try again.")
-  } finally {
-    setIsSubmitting(false)
-  }
-}
-
+  };
 
   return (
     <Card className="bg-white/80 backdrop-blur-sm border-0 shadow-lg">
@@ -158,12 +175,12 @@ function RatingSection({ skillId, averageRating, totalRatings, onRatingUpdate })
         {!hasRated && (
           <div className="p-4 border-2 border-dashed border-indigo-200 rounded-xl">
             <h3 className="text-lg font-semibold text-gray-900 mb-3">Rate This Skill</h3>
-            
+
             <div className="space-y-4">
               <div>
                 <p className="text-sm text-gray-600 mb-2">Your Rating:</p>
-                <InteractiveStarRating 
-                  rating={userRating} 
+                <InteractiveStarRating
+                  rating={userRating}
                   onRatingChange={setUserRating}
                 />
               </div>
@@ -182,14 +199,12 @@ function RatingSection({ skillId, averageRating, totalRatings, onRatingUpdate })
               <Button
                 onClick={handleSubmitRating}
                 disabled={userRating === 0 || isSubmitting}
-
                 className="w-full bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 disabled:opacity-50"
               >
                 {isSubmitting ? (
                   <>
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                     Submitting...
-                    
                   </>
                 ) : (
                   'Submit Rating'
@@ -210,46 +225,54 @@ function RatingSection({ skillId, averageRating, totalRatings, onRatingUpdate })
         )}
       </CardContent>
     </Card>
-  )
+  );
 }
 
+/* ---------- SkillDetailPage ---------- */
 export default function SkillDetailPage() {
-  const skillId = window.location.pathname.split('/').pop()
-  
-  const [skill, setSkill] = useState(null)
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState('')
+  // read skillId from location path (works with react-router)
+  const [skillId, setSkillId] = useState('');
+  useEffect(() => {
+    const parts = window.location.pathname.split('/');
+    const id = parts.pop() || parts.pop(); // handle trailing slash
+    setSkillId(id);
+  }, []);
+
+  const [skill, setSkill] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
 
   const fetchSkillDetails = async () => {
-    setLoading(true)
-    setError('')
-    
+    setLoading(true);
+    setError('');
+
     try {
-      const response = await fetch(`${API_BASE_URL}/skills/${skillId}`)
-      const result = await response.json()
+      const response = await fetch(`${API_BASE_URL}/skills/${skillId}`);
+      const result = await response.json();
 
       if (result.success) {
-        setSkill(result.data)
+        setSkill(result.data);
       } else {
-        setError(result.message || 'Skill not found')
+        setError(result.message || 'Skill not found');
       }
     } catch (err) {
-      console.error('Error fetching skill details:', err)
-      setError('Failed to load skill details. Please try again.')
+      console.error('Error fetching skill details:', err);
+      setError('Failed to load skill details. Please try again.');
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-  }
-
-  const handleRatingUpdate = (updatedSkill) => {
-    setSkill(updatedSkill)
-  }
+  };
 
   useEffect(() => {
     if (skillId) {
-      fetchSkillDetails()
+      fetchSkillDetails();
     }
-  }, [skillId])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [skillId]);
+
+  const handleRatingUpdate = (updatedSkill) => {
+    setSkill(prev => ({ ...prev, ...updatedSkill }));
+  };
 
   const formatPrice = (price, priceType, paymentOptions) => {
     if (paymentOptions === 'exchange') {
@@ -258,9 +281,9 @@ export default function SkillDetailPage() {
           <MessageSquare className="h-5 w-5 mr-2" />
           <span className="text-xl font-bold">Skill Exchange</span>
         </div>
-      )
+      );
     }
-    
+
     if (paymentOptions === 'both') {
       return (
         <div className="space-y-2">
@@ -274,16 +297,16 @@ export default function SkillDetailPage() {
             <span>or Skill Exchange</span>
           </div>
         </div>
-      )
+      );
     }
-    
+
     return (
       <div className="flex items-center text-green-600">
         <span className="text-xl font-bold">₹{price}</span>
         <span className="text-sm ml-1">/{priceType}</span>
       </div>
-    )
-  }
+    );
+  };
 
   if (loading) {
     return (
@@ -295,7 +318,7 @@ export default function SkillDetailPage() {
           </div>
         </div>
       </div>
-    )
+    );
   }
 
   if (error || !skill) {
@@ -313,17 +336,17 @@ export default function SkillDetailPage() {
           </div>
         </div>
       </div>
-    )
+    );
   }
 
+  // Main content
   return (
     <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-white to-purple-50">
-      
       <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Back Button */}
-        <Button 
+        <Button
           onClick={() => window.history.back()}
-          variant="outline" 
+          variant="outline"
           className="mb-6 hover:bg-indigo-50"
         >
           <ArrowLeft className="h-4 w-4 mr-2" />
@@ -334,7 +357,7 @@ export default function SkillDetailPage() {
           <div className="lg:col-span-2 space-y-6">
             {/* Header Card */}
             <Card className="bg-white/80 backdrop-blur-sm border-0 shadow-xl">
-              <CardHeader className="bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-t-lg">
+              <CardHeader className="bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-t-lg p-6">
                 <div className="flex items-center justify-between mb-2">
                   <span className="px-3 py-1 bg-white/20 text-white text-sm font-medium rounded-full">
                     {skill.category}
@@ -348,8 +371,16 @@ export default function SkillDetailPage() {
                   <User className="h-5 w-5 mr-2 text-indigo-200" />
                   <span className="text-indigo-100 text-lg">by {skill.instructor}</span>
                 </div>
+
+                {/* Display instructor email */}
+                {skill.email && (
+                  <div className="flex items-center mt-2">
+                    <Mail className="h-4 w-4 mr-2 text-indigo-200" />
+                    <span className="text-indigo-100 text-sm">{skill.email}</span>
+                  </div>
+                )}
               </CardHeader>
-              
+
               <CardContent className="p-6">
                 {/* Quick Stats */}
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
@@ -408,25 +439,25 @@ export default function SkillDetailPage() {
                 <div>
                   <h3 className="text-xl font-bold text-gray-900 mb-3">Teaching Format</h3>
                   <div className="grid grid-cols-2 gap-3">
-                    {skill.teachingFormat.onlineSessions && (
+                    {skill.teachingFormat?.onlineSessions && (
                       <div className="flex items-center p-3 bg-green-50 border border-green-200 rounded-lg">
                         <CheckCircle className="h-5 w-5 text-green-600 mr-2" />
                         <span className="text-green-800 font-medium">Online Sessions</span>
                       </div>
                     )}
-                    {skill.teachingFormat.inPersonSessions && (
+                    {skill.teachingFormat?.inPersonSessions && (
                       <div className="flex items-center p-3 bg-green-50 border border-green-200 rounded-lg">
                         <CheckCircle className="h-5 w-5 text-green-600 mr-2" />
                         <span className="text-green-800 font-medium">In-Person Sessions</span>
                       </div>
                     )}
-                    {skill.teachingFormat.flexibleSchedule && (
+                    {skill.teachingFormat?.flexibleSchedule && (
                       <div className="flex items-center p-3 bg-green-50 border border-green-200 rounded-lg">
                         <CheckCircle className="h-5 w-5 text-green-600 mr-2" />
                         <span className="text-green-800 font-medium">Flexible Schedule</span>
                       </div>
                     )}
-                    {skill.teachingFormat.provideMaterials && (
+                    {skill.teachingFormat?.provideMaterials && (
                       <div className="flex items-center p-3 bg-green-50 border border-green-200 rounded-lg">
                         <CheckCircle className="h-5 w-5 text-green-600 mr-2" />
                         <span className="text-green-800 font-medium">Materials Provided</span>
@@ -441,7 +472,7 @@ export default function SkillDetailPage() {
                     <h3 className="text-xl font-bold text-gray-900 mb-3">Skills Wanted in Exchange</h3>
                     <div className="flex flex-wrap gap-2">
                       {skill.skills.map((skillName, index) => (
-                        <span 
+                        <span
                           key={index}
                           className="px-3 py-1 bg-blue-100 text-blue-700 rounded-full text-sm font-medium"
                         >
@@ -455,7 +486,7 @@ export default function SkillDetailPage() {
             </Card>
 
             {/* Rating Section */}
-            <RatingSection 
+            <RatingSection
               skillId={skill._id}
               averageRating={skill.averageRating || 0}
               totalRatings={skill.totalRatings || 0}
@@ -477,7 +508,7 @@ export default function SkillDetailPage() {
                   {formatPrice(skill.price, skill.priceType, skill.paymentOptions)}
                 </div>
 
-                <Button 
+                <Button
                   className="w-full bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white font-semibold py-3 text-lg shadow-lg hover:shadow-xl transition-all"
                   size="lg"
                 >
@@ -507,8 +538,16 @@ export default function SkillDetailPage() {
                   </div>
                   <h3 className="font-bold text-lg text-gray-900">{skill.instructor}</h3>
                   <p className="text-gray-600 text-sm">Skill Expert</p>
+
+                  {/* Display instructor email in sidebar */}
+                  {skill.email && (
+                    <div className="flex items-center justify-center mt-2 text-gray-600">
+                      <Mail className="h-4 w-4 mr-2" />
+                      <span className="text-sm">{skill.email}</span>
+                    </div>
+                  )}
                 </div>
-                
+
                 <Button variant="outline" className="w-full">
                   Contact Instructor
                 </Button>
@@ -518,5 +557,5 @@ export default function SkillDetailPage() {
         </div>
       </div>
     </div>
-  )
+  );
 }
