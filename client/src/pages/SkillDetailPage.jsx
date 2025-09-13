@@ -2,6 +2,9 @@ import React, { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
+import { loadStripe } from '@stripe/stripe-js';
+
+const stripePromise = loadStripe(import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY);
 import {
   BookOpen,
   IndianRupee,
@@ -18,6 +21,8 @@ import {
   Mail
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+
+
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
 
@@ -90,11 +95,10 @@ function InteractiveStarRating({ rating, onRatingChange, size = "lg" }) {
           className="focus:outline-none transition-colors hover:scale-110 transform"
         >
           <Star
-            className={`${size === "lg" ? "h-8 w-8" : "h-6 w-6"} cursor-pointer ${
-              value <= (hoverRating || rating)
+            className={`${size === "lg" ? "h-8 w-8" : "h-6 w-6"} cursor-pointer ${value <= (hoverRating || rating)
                 ? "fill-yellow-400 text-yellow-400"
                 : "text-gray-300 hover:text-yellow-300"
-            }`}
+              }`}
           />
         </button>
       ))}
@@ -116,15 +120,15 @@ function RatingSection({ skillId, averageRating, totalRatings, onRatingUpdate })
     setIsSubmitting(true);
     try {
       const response = await fetch(`${API_BASE_URL}/skills/${skillId}/rate`, {
-  method: "POST",
-  headers: {
-    "Content-Type": "application/json",
-  },
-  body: JSON.stringify({
-    rating: userRating,
-    comment: comment.trim(),
-  }),
-});
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          rating: userRating,
+          comment: comment.trim(),
+        }),
+      });
 
       const result = await response.json();
 
@@ -338,6 +342,32 @@ export default function SkillDetailPage() {
       </div>
     );
   }
+  /* ---------- SkillDetailPage ---------- */
+  // inside your component
+  const handleCheckout = async () => {
+    if (!skill) return;
+
+    try {
+      const stripe = await stripePromise;
+
+      const res = await fetch(`${API_BASE_URL}/payments/checkout`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ skillId: skill._id, price: skill.price }),
+      });
+
+      const data = await res.json();
+
+      if (data.id) {
+        await stripe.redirectToCheckout({ sessionId: data.id });
+      } else {
+        alert('Failed to initiate payment.');
+      }
+    } catch (err) {
+      console.error('Checkout error:', err);
+      alert('Failed to initiate payment.');
+    }
+  };
 
   // Main content
   return (
@@ -509,6 +539,7 @@ export default function SkillDetailPage() {
                 </div>
 
                 <Button
+                  onClick={skill.paymentOptions === 'paid' ? handleCheckout : () => alert('Propose exchange flow')}
                   className="w-full bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white font-semibold py-3 text-lg shadow-lg hover:shadow-xl transition-all"
                   size="lg"
                 >
