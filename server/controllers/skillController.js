@@ -1,190 +1,123 @@
 const Skill = require('../models/Skill');
 const asyncHandler = require('../utils/asyncHandler');
 
-const { getAuth } = require('@clerk/express');
-const { clerkClient } = require('@clerk/clerk-sdk-node');
-
-
-async function getUserEmail(userId) {
-  if (!userId) return null;
-  const user = await clerkClient.users.getUser(userId);
-  const emails = user?.emailAddresses || [];
-  if (emails.length === 0) return null;
-  const primary = emails.find((e) => e.id === user.primaryEmailAddressId);
-  return primary?.emailAddress || emails[0]?.emailAddress || null;
-}
-
-// GET published skills
+// GET all skills with optional filters and sorting
 exports.getSkills = asyncHandler(async (req, res) => {
-  const { category, level, paymentOptions, page = 1, limit = 10 } = req.query;
+  // We are forcing the sort to be by averageRating and the limit to be 5.
   const filter = { status: 'published' };
-  if (category) filter.category = new RegExp(category, 'i');
-  if (level) filter.level = level;
-  if (paymentOptions) filter.paymentOptions = paymentOptions;
-
-  const l = parseInt(limit, 10);
-  const p = parseInt(page, 10);
+  const sortOptions = { averageRating: -1 };
+  const limit = 5;
 
   const [items, total] = await Promise.all([
-    Skill.find(filter).sort({ createdAt: -1 }).limit(l).skip((p - 1) * l),
-    Skill.countDocuments(filter),
+    Skill.find(filter).sort(sortOptions).limit(limit).skip(0),
+    Skill.countDocuments(filter)
   ]);
 
   res.json({
     success: true,
     data: items,
-    pagination: { page: p, limit: l, total, pages: Math.ceil(total / l) },
+    pagination: {
+      page: 1,
+      limit: limit,
+      total,
+      pages: Math.ceil(total / limit)
+    }
   });
 });
 
-// GET single skill
+// GET a single skill by its ID
 exports.getSkillById = asyncHandler(async (req, res) => {
   const item = await Skill.findById(req.params.id);
-  if (!item)
-    return res
-      .status(404)
-      .json({ success: false, message: 'Skill not found' });
-
+  if (!item) {
+    res.status(404);
+    throw new Error('Skill not found');
+  }
   res.json({ success: true, data: item });
 });
 
-// CREATE skill 
+// POST a new skill
 exports.createSkill = asyncHandler(async (req, res) => {
-  const { userId } = getAuth(req);
-  if (!userId)
-    return res.status(401).json({ success: false, message: 'Unauthorized' });
+  const body = req.body;
+  const required = ['title', 'instructor', 'category', 'level', 'duration', 'timePerWeek', 'paymentOptions', 'description'];
+  const missing = required.filter((f) => !body[f]);
 
-  const email = await getUserEmail(userId);
-
-  const required = [
-    'title',
-    'instructor',
-    'category',
-    'level',
-    'duration',
-    'timePerWeek',
-    'paymentOptions',
-    'description',
-  ];
-  const missing = required.filter((f) => !req.body[f]);
   if (missing.length) {
-    return res.status(400).json({
+    res.status(400);
+    return res.json({
       success: false,
-      message: `Missing required fields: ${missing.join(', ')}`,
+      message: `Missing required fields: ${missing.join(', ')}`
     });
   }
 
-  const skill = await Skill.create({
-    ...req.body,
-    ownerId: String(userId),
-    email: email || '',
-    status: req.body.status || 'draft',
-  });
-
-  res.status(201).json({
-    success: true,
-    message: 'Skill created successfully',
-    data: skill,
-  });
+  const item = await Skill.create(body);
+  res.status(201).json({ success: true, message: 'Skill created successfully', data: item });
 });
 
-// UPDATE skill
+// PUT update an existing skill
 exports.updateSkill = asyncHandler(async (req, res) => {
-  const { userId } = getAuth(req);
-  const skill = await Skill.findById(req.params.id);
-  if (!skill)
-    return res
-      .status(404)
-      .json({ success: false, message: 'Skill not found' });
-  if (String(skill.ownerId) !== String(userId))
-    return res.status(403).json({ success: false, message: 'Forbidden' });
-
-  const updated = await Skill.findByIdAndUpdate(req.params.id, req.body, {
-    new: true,
-    runValidators: true,
-  });
-
-  res.json({
-    success: true,
-    message: 'Skill updated successfully',
-    data: updated,
-  });
+  const item = await Skill.findByIdAndUpdate(
+    req.params.id,
+    { ...req.body },
+    { new: true, runValidators: true }
+  );
+  if (!item) {
+    res.status(404);
+    throw new Error('Skill not found');
+  }
+  res.json({ success: true, message: 'Skill updated successfully', data: item });
 });
 
-// DELETE skill
+// DELETE a skill
 exports.deleteSkill = asyncHandler(async (req, res) => {
-  const { userId } = getAuth(req);
-  const skill = await Skill.findById(req.params.id);
-  if (!skill)
-    return res
-      .status(404)
-      .json({ success: false, message: 'Skill not found' });
-  if (String(skill.ownerId) !== String(userId))
-    return res.status(403).json({ success: false, message: 'Forbidden' });
-
-  await skill.deleteOne();
+  const item = await Skill.findByIdAndDelete(req.params.id);
+  if (!item) {
+    res.status(404);
+    throw new Error('Skill not found');
+  }
   res.json({ success: true, message: 'Skill deleted successfully' });
 });
 
-// SAVE draft 
+// Save a skill as a draft
 exports.saveDraft = asyncHandler(async (req, res) => {
-  const { userId } = getAuth(req);
-  if (!userId)
-    return res.status(401).json({ success: false, message: 'Unauthorized' });
-
-  const email = await getUserEmail(userId);
-  const skill = await Skill.create({
-    ...req.body,
-    ownerId: String(userId),
-    email: email || '',
-    status: 'draft',
-  });
-
-  res.status(201).json({ success: true, message: 'Draft saved', data: skill });
+  const item = await Skill.create({ ...req.body, status: 'draft' });
+  res.status(201).json({ success: true, message: 'Skill saved as draft successfully', data: item });
 });
 
-// PUBLISH skill 
+// Publish a skill
 exports.publishSkill = asyncHandler(async (req, res) => {
-  const { userId } = getAuth(req);
-  if (!userId)
-    return res.status(401).json({ success: false, message: 'Unauthorized' });
-
-  const skill = await Skill.findById(req.params.id);
-  if (!skill)
-    return res
-      .status(404)
-      .json({ success: false, message: 'Skill not found' });
-  if (String(skill.ownerId) !== String(userId))
-    return res.status(403).json({ success: false, message: 'Forbidden' });
-
-  skill.status = 'published';
-  await skill.save();
-
-  res.json({ success: true, message: 'Skill published successfully', data: skill });
+  const item = await Skill.findByIdAndUpdate(
+    req.params.id,
+    { status: 'published' },
+    { new: true }
+  );
+  if (!item) {
+    res.status(404);
+    throw new Error('Skill not found');
+  }
+  res.json({ success: true, message: 'Skill published successfully', data: item });
 });
 
-// ADD rating
+// Add a new rating to a skill
 exports.addRating = asyncHandler(async (req, res) => {
   const { rating, comment = '' } = req.body;
   const rNum = parseInt(rating, 10);
+
   if (!rNum || rNum < 1 || rNum > 5) {
-    return res
-      .status(400)
-      .json({ success: false, message: 'Rating must be between 1-5' });
+    res.status(400);
+    return res.json({ success: false, message: 'Rating must be between 1 and 5' });
   }
 
   const item = await Skill.findById(req.params.id);
-  if (!item)
-    return res
-      .status(404)
-      .json({ success: false, message: 'Skill not found' });
+  if (!item) {
+    res.status(404);
+    throw new Error('Skill not found');
+  }
 
-  const { userId } = getAuth(req);
   item.ratings.push({
     rating: rNum,
-    comment: comment.trim(),
-    userId: userId || 'anonymous',
-    createdAt: new Date(),
+    comment: (comment || '').trim(),
+    userId: 'anonymous',
+    createdAt: new Date()
   });
 
   item.calculateAverageRating();
@@ -197,27 +130,24 @@ exports.addRating = asyncHandler(async (req, res) => {
       _id: item._id,
       averageRating: item.averageRating,
       totalRatings: item.totalRatings,
-      ratings: item.ratings.sort((a, b) => b.createdAt - a.createdAt),
-    },
+      ratings: item.ratings.sort((a, b) => b.createdAt - a.createdAt)
+    }
   });
 });
 
-// GET ratings
+// Get ratings for a skill
 exports.getRatings = asyncHandler(async (req, res) => {
-  const item = await Skill.findById(req.params.id).select(
-    'ratings averageRating totalRatings'
-  );
-  if (!item)
-    return res
-      .status(404)
-      .json({ success: false, message: 'Skill not found' });
-
+  const item = await Skill.findById(req.params.id).select('ratings averageRating totalRatings');
+  if (!item) {
+    res.status(404);
+    throw new Error('Skill not found');
+  }
   res.json({
     success: true,
     data: {
       ratings: item.ratings.sort((a, b) => b.createdAt - a.createdAt),
       averageRating: item.averageRating,
-      totalRatings: item.totalRatings,
-    },
+      totalRatings: item.totalRatings
+    }
   });
 });
