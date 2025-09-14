@@ -8,7 +8,6 @@ import { BookOpen, IndianRupee, Clock, Star, Users, Filter, Search, Loader2, Ale
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api'
 
 
-
 // Star Rating Component
 function StarRating({ rating, size = "sm" }) {
   const stars = []
@@ -188,7 +187,7 @@ function SkillFilters({ filters, setFilters, categories }) {
   )
 }
 
-export default function UserPostedSkills() {
+export default function UserPostedSkills({ limit, sort }) {
   const [skills, setSkills] = useState([])
   const [categories, setCategories] = useState([])
   const [loading, setLoading] = useState(true)
@@ -201,7 +200,7 @@ export default function UserPostedSkills() {
   })
   const [pagination, setPagination] = useState({
     page: 1,
-    limit: 12,
+    limit: limit || 12,
     total: 0,
     pages: 1
   })
@@ -213,11 +212,16 @@ export default function UserPostedSkills() {
     
     try {
       const queryParams = new URLSearchParams()
-      if (filters.category) queryParams.append('category', filters.category)
-      if (filters.level) queryParams.append('level', filters.level)
-      if (filters.paymentOptions) queryParams.append('paymentOptions', filters.paymentOptions)
-      queryParams.append('page', pagination.page.toString())
-      queryParams.append('limit', pagination.limit.toString())
+      if (sort) queryParams.append('sort', sort)
+      if (limit) queryParams.append('limit', limit)
+      if (!limit) {
+        if (filters.category) queryParams.append('category', filters.category)
+        if (filters.level) queryParams.append('level', filters.level)
+        if (filters.paymentOptions) queryParams.append('paymentOptions', filters.paymentOptions)
+        queryParams.append('page', pagination.page.toString())
+        queryParams.append('limit', pagination.limit.toString())
+      }
+      
 
       const response = await fetch(`${API_BASE_URL}/skills?${queryParams}`)
       const result = await response.json()
@@ -269,7 +273,7 @@ export default function UserPostedSkills() {
   // Effect to fetch data
   useEffect(() => {
     fetchSkills()
-  }, [filters.category, filters.level, filters.paymentOptions, pagination.page])
+  }, [filters.category, filters.level, filters.paymentOptions, pagination.page, sort, limit])
 
   // Effect for search (with debounce)
   useEffect(() => {
@@ -310,18 +314,20 @@ export default function UserPostedSkills() {
     <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-white to-purple-50">
       
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-        {/* Header */}
-        <div className="text-center mb-12">
-          <h1 className="text-4xl font-bold text-gray-900 mb-4">
-            Discover Amazing Skills
-          </h1>
-          <p className="text-xl text-gray-600 max-w-3xl mx-auto">
-            Learn from experts, share your knowledge, and grow together in our community
-          </p>
-        </div>
+        {/* Header (Only show for browse page) */}
+        {!limit && (
+            <div className="text-center mb-12">
+              <h1 className="text-4xl font-bold text-gray-900 mb-4">
+                Discover Amazing Skills
+              </h1>
+              <p className="text-xl text-gray-600 max-w-3xl mx-auto">
+                Learn from experts, share your knowledge, and grow together in our community
+              </p>
+            </div>
+        )}
 
-        {/* Filters */}
-        <SkillFilters filters={filters} setFilters={setFilters} categories={categories} />
+        {/* Filters (Only show for browse page) */}
+        {!limit && <SkillFilters filters={filters} setFilters={setFilters} categories={categories} />}
 
         {/* Loading State */}
         {loading && skills.length === 0 && (
@@ -348,17 +354,19 @@ export default function UserPostedSkills() {
             <p className="text-gray-600 mb-4">
               Try adjusting your filters or search terms
             </p>
-            <Button 
-              onClick={() => setFilters({ search: '', category: '', level: '', paymentOptions: '' })}
-              variant="outline"
-            >
-              Clear Filters
-            </Button>
+            {!limit && (
+              <Button 
+                onClick={() => setFilters({ search: '', category: '', level: '', paymentOptions: '' })}
+                variant="outline"
+              >
+                Clear Filters
+              </Button>
+            )}
           </div>
         )}
 
-        {/* Pagination */}
-        {pagination.pages > 1 && (
+        {/* Pagination (Only show for browse page) */}
+        {!limit && pagination.pages > 1 && (
           <div className="flex justify-center items-center space-x-4 mt-12">
             <Button
               variant="outline"
@@ -396,8 +404,8 @@ export default function UserPostedSkills() {
           </div>
         )}
 
-        {/* Call to Action */}
-        {skills.length > 0 && (
+        {/* Call to Action (Only show for browse page) */}
+        {!limit && skills.length > 0 && (
           <div className="text-center mt-16 p-8 bg-gradient-to-r from-indigo-600 to-purple-600 rounded-3xl text-white">
             <h2 className="text-3xl font-bold mb-4">Ready to Share Your Skills?</h2>
             <p className="text-xl text-indigo-100 mb-6">

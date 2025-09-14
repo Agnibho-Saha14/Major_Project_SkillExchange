@@ -29,19 +29,19 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* Recently Posted Skills */}
+      {/* Top Rated Skills */}
       <section className="py-16 bg-gray-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center mb-12">
             <div>
-              <h2 className="text-3xl font-bold text-gray-900 mb-4">Recently Posted Skills</h2>
-              <p className="text-lg text-gray-600">Latest skills shared by our community</p>
+              <h2 className="text-3xl font-bold text-gray-900 mb-4">Top Rated Skills</h2>
+              <p className="text-lg text-gray-600">Explore the best skills in our community</p>
             </div>
             <Button variant="outline" asChild>
               <Link to="/browse">View All<ArrowRight className="ml-2 h-4 w-4" /></Link>
             </Button>
           </div>
-          <UserPostedSkills />
+          <UserPostedSkills limit={6} sort="rating" />
         </div>
       </section>
     </div>
