@@ -22,7 +22,7 @@ const teachingFormatSchema = new mongoose.Schema(
 
 const skillSchema = new mongoose.Schema(
   {
-    ownerId: { type: String, required: true }, // <- important for ownership checks
+    ownerId: { type: String, required: false }, // <- important for ownership checks
     title: { type: String, required: true, trim: true },
     instructor: { type: String, required: true, trim: true },
     category: { type: String, required: true, trim: true },
