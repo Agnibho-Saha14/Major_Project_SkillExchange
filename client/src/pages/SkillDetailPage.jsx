@@ -523,9 +523,9 @@ export default function SkillDetailPage() {
               onRatingUpdate={handleRatingUpdate}
             />
           </div>
-
+          <div className="lg:col-span-1">
           {/* Sidebar */}
-          <div className="space-y-6">
+          <div className="sticky top-8 space-y-4">
             {/* Pricing Card */}
             <Card className="bg-white/80 backdrop-blur-sm border-0 shadow-xl sticky top-8">
               <CardHeader className="text-center">
@@ -585,6 +585,7 @@ export default function SkillDetailPage() {
               </CardContent>
             </Card>
           </div>
+         </div>
         </div>
       </div>
     </div>
