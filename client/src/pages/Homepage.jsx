@@ -3,6 +3,7 @@ import { Search, ArrowRight, BookOpen } from "lucide-react"
 import { Link } from "react-router-dom"
 import  UserPostedSkills  from "./UserPostedSkills"
 import Navbar from "../components/Navbar"
+import CTASection from "@/components/CTASection"
 
 export default function HomePage() {
   return (
@@ -42,8 +43,12 @@ export default function HomePage() {
             </Button>
           </div>
           <UserPostedSkills limit={6} sort="rating" />
+          { <CTASection/>}
         </div>
+        
       </section>
+            
+
     </div>
   )
 }

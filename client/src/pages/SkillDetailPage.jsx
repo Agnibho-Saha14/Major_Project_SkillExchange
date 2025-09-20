@@ -20,7 +20,7 @@ import {
   AlertCircle,
   Mail
 } from "lucide-react";
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 
 
 
@@ -82,7 +82,7 @@ function InteractiveStarRating({ rating, onRatingChange, size = "lg" }) {
   const handleMouseLeave = () => {
     setHoverRating(0);
   };
-
+  
   return (
     <div className="flex items-center space-x-1">
       {[1, 2, 3, 4, 5].map((value) => (
@@ -368,20 +368,22 @@ export default function SkillDetailPage() {
       alert('Failed to initiate payment.');
     }
   };
-
+  
   // Main content
   return (
+    
     <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-white to-purple-50">
       <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Back Button */}
+        <Link to="/">
         <Button
-          onClick={() => window.history.back()}
           variant="outline"
           className="mb-6 hover:bg-indigo-50"
         >
           <ArrowLeft className="h-4 w-4 mr-2" />
           Back to Skills
         </Button>
+        </Link>
 
         <div className="grid lg:grid-cols-3 gap-8">
           <div className="lg:col-span-2 space-y-6">
