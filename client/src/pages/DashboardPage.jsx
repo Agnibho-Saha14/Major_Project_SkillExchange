@@ -1,39 +1,49 @@
 import { useState } from "react"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { BookOpen } from "lucide-react"
-import { Link } from "react-router-dom"
+import { useUser } from "@clerk/clerk-react"
 import Navbar from "../components/Navbar"
-
-
-const mockSkills = [
-  { id: 1, title: "Driving Lessons", students: 10 },
-  { id: 2, title: "Cooking Class", students: 5 },
-]
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import PostedSkills from "./PostedSkills"
 
 export default function DashboardPage() {
   const [tab, setTab] = useState("posted")
+  const { user, isLoaded } = useUser()
+
+  if (!isLoaded) {
+    return (
+      <div className="min-h-screen bg-gray-50">
+        <Navbar />
+        <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+          <div className="flex justify-center items-center h-64">
+            <div className="text-lg">Loading...</div>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
   return (
     <div className="min-h-screen bg-gray-50">
-          <Navbar />
-
-
+      <Navbar />
       <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <div className="mb-6">
+          <h1 className="text-2xl font-bold text-gray-900">Dashboard</h1>
+          <p className="text-gray-600">Welcome back, {user?.firstName || 'User'}!</p>
+        </div>
+
         <Tabs value={tab} onValueChange={setTab}>
           <TabsList>
             <TabsTrigger value="posted">My Posted Skills</TabsTrigger>
             <TabsTrigger value="enrolled">Enrolled Skills</TabsTrigger>
           </TabsList>
+
           <TabsContent value="posted">
-            <div className="grid md:grid-cols-2 gap-4 mt-4">
-              {mockSkills.map(skill=>(
-                <Card key={skill.id}><CardHeader><CardTitle>{skill.title}</CardTitle></CardHeader>
-                  <CardContent>Students Enrolled: {skill.students}</CardContent></Card>
-              ))}
-            </div>
+            <PostedSkills />
           </TabsContent>
+
           <TabsContent value="enrolled">
-            <p className="mt-4 text-gray-600">You have not enrolled in any skills yet.</p>
+            <div className="text-center py-12">
+              <h3 className="text-lg font-medium text-gray-900 mb-2">Enrolled skills will be shown here</h3>
+            </div>
           </TabsContent>
         </Tabs>
       </div>
