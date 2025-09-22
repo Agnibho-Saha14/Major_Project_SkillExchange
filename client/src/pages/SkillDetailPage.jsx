@@ -235,6 +235,7 @@ function RatingSection({ skillId, averageRating, totalRatings, onRatingUpdate })
 /* ---------- SkillDetailPage ---------- */
 export default function SkillDetailPage() {
   // read skillId from location path (works with react-router)
+  const navigate = useNavigate();
   const [skillId, setSkillId] = useState('');
   useEffect(() => {
     const parts = window.location.pathname.split('/');
@@ -369,6 +370,17 @@ export default function SkillDetailPage() {
     }
   };
   
+  
+  const handleContact=()=>{
+    navigate("/contact",{
+    state: {
+      instructorEmail: skill.email,
+      instructorName: skill.instructor,
+      courseTitle: skill.title,
+      skillId: skill._id   
+    },
+  });
+  }
   // Main content
   return (
     
@@ -581,8 +593,8 @@ export default function SkillDetailPage() {
                   )}
                 </div>
 
-                <Button variant="outline" className="w-full">
-                  Contact Instructor
+                <Button variant="outline" className="w-full" onClick={handleContact}>
+                  Contact Instructor for Queries
                 </Button>
               </CardContent>
             </Card>

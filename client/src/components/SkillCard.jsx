@@ -3,8 +3,21 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { IndianRupee, Clock, Users } from "lucide-react"
 import StarRating from "./starRating"
 import PriceDisplay from "./priceDisplay"
+import { useNavigate } from "react-router-dom"
+import { useUser } from "@clerk/clerk-react"
 
 export default function SkillCard({ skill }) {
+
+  const { isSignedIn } = useUser();
+  const navigate=useNavigate();
+  function handleSignIn(){
+    if(!isSignedIn){
+      navigate("/login")
+    }
+     else {
+      navigate(`/skills/${skill._id}`);
+    }
+  }
   return (
     <Card className="h-full hover:shadow-xl transition-all duration-300 border-0 bg-white/80 backdrop-blur-sm hover:bg-white group">
       <CardHeader className="pb-3">
@@ -54,11 +67,11 @@ export default function SkillCard({ skill }) {
               paymentOptions={skill.paymentOptions}
             />
           </div>
-          <a href={`/skills/${skill._id}`}>
-            <Button className="bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white font-semibold px-6 py-2 rounded-lg transition-all">
+          
+            <Button onClick={handleSignIn} className="bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white font-semibold px-6 py-2 rounded-lg transition-all">
               View Details
             </Button>
-          </a>
+          
         </div>
       </CardContent>
     </Card>
