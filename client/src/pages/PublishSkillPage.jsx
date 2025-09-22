@@ -53,7 +53,6 @@ export default function PublishSkillPage() {
     duration: "", 
     timePerWeek: "",
     price: "", 
-    priceType: "", 
     paymentOptions: "paid", 
     description: "", 
     skills: [],
@@ -113,10 +112,8 @@ const submitSkill = async (endpoint, successMessage, setLoadingState) => {
 
     if (form.paymentOptions === 'paid' || form.paymentOptions === 'both') {
       skillData.price = form.price ? parseFloat(form.price) : 0
-      skillData.priceType = form.priceType
     } else {
       skillData.price = 0
-      delete skillData.priceType
     }
 
     // ✅ Get the session token
@@ -147,7 +144,6 @@ const submitSkill = async (endpoint, successMessage, setLoadingState) => {
           duration: "", 
           timePerWeek: "",
           price: "", 
-          priceType: "", 
           paymentOptions: "paid", 
           description: "", 
           skills: [],
@@ -187,7 +183,7 @@ const submitSkill = async (endpoint, successMessage, setLoadingState) => {
     }
 
     // Validate payment fields if paid option is selected
-    if ((form.paymentOptions === 'paid' || form.paymentOptions === 'both') && (!form.price || !form.priceType)) {
+    if ((form.paymentOptions === 'paid' || form.paymentOptions === 'both') && (!form.price)) {
       showToast('Please fill in price and price type for paid options', 'error')
       return
     }
@@ -351,15 +347,8 @@ const submitSkill = async (endpoint, successMessage, setLoadingState) => {
                         min="0"
                         step="0.01"
                       />
-                      <Select value={form.priceType} onValueChange={(v)=>setForm({...form,priceType:v})}>
-                        <SelectTrigger className="h-11 rounded-xl border-2 border-green-200 focus:border-green-500 bg-white">
-                          <SelectValue placeholder="Select price type" />
-                        </SelectTrigger>
-                        <SelectContent className="bg-white border-2 border-green-200 rounded-xl shadow-xl z-50">
-                          <SelectItem value="hourly" className="text-base py-2 hover:bg-green-50">Per Hour</SelectItem>
-                          <SelectItem value="weekly" className="text-base py-2 hover:bg-green-50">Per Week</SelectItem>
-                          <SelectItem value="course" className="text-base py-2 hover:bg-green-50">Per Course</SelectItem>
-                        </SelectContent>
+                      <Select className="h-11 rounded-xl border-2 border-green-200 focus:border-green-500 bg-white">
+                        <span className="text-green-800">Per Course</span>
                       </Select>
                     </div>
                   </div>

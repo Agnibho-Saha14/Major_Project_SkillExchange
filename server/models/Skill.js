@@ -30,7 +30,7 @@ const skillSchema = new mongoose.Schema(
     duration: { type: String, required: true, trim: true },
     timePerWeek: { type: String, required: true, trim: true },
     price: { type: Number, default: 0 },
-    priceType: { type: String, enum: ['hourly', 'weekly', 'course'], default: 'hourly' },
+    priceType: { type: String, enum: ['course'] },
     paymentOptions: { type: String, required: true, enum: ['paid', 'exchange', 'both'] },
     description: { type: String, required: true },
     skills: { type: [String], default: [] },
