@@ -63,7 +63,6 @@ export default function SkillCard({ skill }) {
           <div className="flex items-center">
             <PriceDisplay 
               price={skill.price}
-              priceType={skill.priceType}
               paymentOptions={skill.paymentOptions}
             />
           </div>

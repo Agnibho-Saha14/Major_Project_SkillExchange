@@ -279,7 +279,7 @@ export default function SkillDetailPage() {
     setSkill(prev => ({ ...prev, ...updatedSkill }));
   };
 
-  const formatPrice = (price, priceType, paymentOptions) => {
+  const formatPrice = (price, paymentOptions) => {
     if (paymentOptions === 'exchange') {
       return (
         <div className="flex items-center text-blue-600">
@@ -295,7 +295,7 @@ export default function SkillDetailPage() {
           <div className="flex items-center text-green-600">
             <IndianRupee className="h-5 w-5 mr-1" />
             <span className="text-xl font-bold">₹{price}</span>
-            <span className="text-sm ml-1">/{priceType}</span>
+            <span className="text-sm ml-1">/course</span>
           </div>
           <div className="flex items-center text-blue-600 text-sm">
             <MessageSquare className="h-4 w-4 mr-1" />
@@ -308,7 +308,7 @@ export default function SkillDetailPage() {
     return (
       <div className="flex items-center text-green-600">
         <span className="text-xl font-bold">₹{price}</span>
-        <span className="text-sm ml-1">/{priceType}</span>
+        <span className="text-sm ml-1">/course</span>
       </div>
     );
   };
@@ -549,7 +549,7 @@ export default function SkillDetailPage() {
               </CardHeader>
               <CardContent className="text-center space-y-4">
                 <div className="p-4 bg-gradient-to-r from-green-50 to-blue-50 rounded-xl">
-                  {formatPrice(skill.price, skill.priceType, skill.paymentOptions)}
+                  {formatPrice(skill.price, skill.paymentOptions)}
                 </div>
 
                 <Button
