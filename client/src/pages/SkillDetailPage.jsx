@@ -3,6 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
 import { loadStripe } from '@stripe/stripe-js';
+import { useUser } from '@clerk/clerk-react';
 
 const stripePromise = loadStripe(import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY);
 import {
@@ -18,11 +19,10 @@ import {
   ArrowLeft,
   Loader2,
   AlertCircle,
-  Mail
+  Mail,
+  Shield
 } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
-
-
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
 
@@ -107,7 +107,7 @@ function InteractiveStarRating({ rating, onRatingChange, size = "lg" }) {
 }
 
 /* ---------- RatingSection ---------- */
-function RatingSection({ skillId, averageRating, totalRatings, onRatingUpdate }) {
+function RatingSection({ skillId, averageRating, totalRatings, onRatingUpdate, isOwnSkill }) {
   const [userRating, setUserRating] = useState(0);
   const [comment, setComment] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -176,7 +176,7 @@ function RatingSection({ skillId, averageRating, totalRatings, onRatingUpdate })
         </div>
 
         {/* Rate This Skill */}
-        {!hasRated && (
+        {!hasRated && !isOwnSkill && (
           <div className="p-4 border-2 border-dashed border-indigo-200 rounded-xl">
             <h3 className="text-lg font-semibold text-gray-900 mb-3">Rate This Skill</h3>
 
@@ -218,6 +218,16 @@ function RatingSection({ skillId, averageRating, totalRatings, onRatingUpdate })
           </div>
         )}
 
+        {/* Owner Message */}
+        {isOwnSkill && (
+          <div className="p-4 bg-blue-50 border border-blue-200 rounded-xl">
+            <div className="flex items-center text-blue-800">
+              <Shield className="h-5 w-5 mr-2" />
+              <span className="font-medium">This is your skill - you cannot rate your own content.</span>
+            </div>
+          </div>
+        )}
+
         {/* Thank You Message */}
         {hasRated && (
           <div className="p-4 bg-green-50 border border-green-200 rounded-xl">
@@ -234,9 +244,10 @@ function RatingSection({ skillId, averageRating, totalRatings, onRatingUpdate })
 
 /* ---------- SkillDetailPage ---------- */
 export default function SkillDetailPage() {
-  // read skillId from location path (works with react-router)
+  const { user, isLoaded: userLoaded } = useUser();
   const navigate = useNavigate();
   const [skillId, setSkillId] = useState('');
+  
   useEffect(() => {
     const parts = window.location.pathname.split('/');
     const id = parts.pop() || parts.pop(); // handle trailing slash
@@ -246,6 +257,11 @@ export default function SkillDetailPage() {
   const [skill, setSkill] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+
+  // Check if current user is the skill owner
+  const isOwnSkill = userLoaded && user && skill && 
+    (user.emailAddresses[0]?.emailAddress === skill.email || 
+     user.emailAddresses.some(email => email.emailAddress === skill.email));
 
   const fetchSkillDetails = async () => {
     setLoading(true);
@@ -313,7 +329,99 @@ export default function SkillDetailPage() {
     );
   };
 
-  if (loading) {
+  const handleCheckout = async () => {
+    if (!skill) return;
+
+    // Prevent self-enrollment
+    if (isOwnSkill) {
+      alert('You cannot enroll in your own course.');
+      return;
+    }
+
+    // Check if user is authenticated
+    if (!userLoaded || !user) {
+      alert('Please sign in to enroll in this course.');
+      return;
+    }
+
+    try {
+      const stripe = await stripePromise;
+
+      const res = await fetch(`${API_BASE_URL}/payments/checkout`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          skillId: skill._id, 
+          price: skill.price,
+          userEmail: user.emailAddresses[0]?.emailAddress 
+        }),
+      });
+
+      const data = await res.json();
+
+      if (data.id) {
+        await stripe.redirectToCheckout({ sessionId: data.id });
+      } else {
+        alert('Failed to initiate payment.');
+      }
+    } catch (err) {
+      console.error('Checkout error:', err);
+      alert('Failed to initiate payment.');
+    }
+  };
+
+  const handleProposeExchange = () => {
+    // Prevent self-exchange
+    if (isOwnSkill) {
+      alert('You cannot propose an exchange for your own skill.');
+      return;
+    }
+
+    // Check if user is authenticated
+    if (!userLoaded || !user) {
+      alert('Please sign in to propose an exchange.');
+      return;
+    }
+
+    // Navigate to exchange proposal flow
+    navigate("/propose-exchange", {
+      state: {
+        skillId: skill._id,
+        instructorEmail: skill.email,
+        instructorName: skill.instructor,
+        courseTitle: skill.title,
+        wantedSkills: skill.skills
+      },
+    });
+  };
+
+  const handleContact = () => {
+    // Check if user is authenticated
+    if (!userLoaded || !user) {
+      alert('Please sign in to contact the instructor.');
+      return;
+    }
+
+    navigate("/contact", {
+      state: {
+        instructorEmail: skill.email,
+        instructorName: skill.instructor,
+        courseTitle: skill.title,
+        skillId: skill._id   
+      },
+    });
+  }
+
+  const handleEnrollAction = () => {
+    if (skill.paymentOptions === 'exchange') {
+      handleProposeExchange();
+    } else {
+      handleCheckout();
+    }
+  };
+
+  // Show loading while user data is being fetched
+  if (!userLoaded || loading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-white to-purple-50">
         <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
@@ -343,47 +451,9 @@ export default function SkillDetailPage() {
       </div>
     );
   }
-  /* ---------- SkillDetailPage ---------- */
-  // inside your component
-  const handleCheckout = async () => {
-    if (!skill) return;
 
-    try {
-      const stripe = await stripePromise;
-
-      const res = await fetch(`${API_BASE_URL}/payments/checkout`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ skillId: skill._id, price: skill.price }),
-      });
-
-      const data = await res.json();
-
-      if (data.id) {
-        await stripe.redirectToCheckout({ sessionId: data.id });
-      } else {
-        alert('Failed to initiate payment.');
-      }
-    } catch (err) {
-      console.error('Checkout error:', err);
-      alert('Failed to initiate payment.');
-    }
-  };
-  
-  
-  const handleContact=()=>{
-    navigate("/contact",{
-    state: {
-      instructorEmail: skill.email,
-      instructorName: skill.instructor,
-      courseTitle: skill.title,
-      skillId: skill._id   
-    },
-  });
-  }
   // Main content
   return (
-    
     <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-white to-purple-50">
       <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Back Button */}
@@ -406,9 +476,17 @@ export default function SkillDetailPage() {
                   <span className="px-3 py-1 bg-white/20 text-white text-sm font-medium rounded-full">
                     {skill.category}
                   </span>
-                  <span className="px-3 py-1 bg-white/20 text-white text-sm font-medium rounded-full">
-                    {skill.level}
-                  </span>
+                  <div className="flex items-center space-x-2">
+                    <span className="px-3 py-1 bg-white/20 text-white text-sm font-medium rounded-full">
+                      {skill.level}
+                    </span>
+                    {isOwnSkill && (
+                      <span className="px-3 py-1 bg-yellow-500 text-white text-xs font-medium rounded-full flex items-center">
+                        <Shield className="h-3 w-3 mr-1" />
+                        Your Skill
+                      </span>
+                    )}
+                  </div>
                 </div>
                 <CardTitle className="text-3xl font-bold">{skill.title}</CardTitle>
                 <div className="flex items-center mt-3">
@@ -535,16 +613,18 @@ export default function SkillDetailPage() {
               averageRating={skill.averageRating || 0}
               totalRatings={skill.totalRatings || 0}
               onRatingUpdate={handleRatingUpdate}
+              isOwnSkill={isOwnSkill}
             />
           </div>
+          
           <div className="lg:col-span-1">
           {/* Sidebar */}
           <div className="sticky top-8 space-y-4">
             {/* Pricing Card */}
-            <Card className="bg-white/80 backdrop-blur-sm border-0 shadow-xl ">
+            <Card className="bg-white/80 backdrop-blur-sm border-0 shadow-xl">
               <CardHeader className="text-center">
                 <CardTitle className="text-2xl font-bold text-gray-900">
-                  Get Started
+                  {isOwnSkill ? 'Your Skill' : 'Get Started'}
                 </CardTitle>
               </CardHeader>
               <CardContent className="text-center space-y-4">
@@ -552,19 +632,43 @@ export default function SkillDetailPage() {
                   {formatPrice(skill.price, skill.paymentOptions)}
                 </div>
 
-                <Button
-                  onClick={skill.paymentOptions === 'paid' ? handleCheckout : () => alert('Propose exchange flow')}
-                  className="w-full bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white font-semibold py-3 text-lg shadow-lg hover:shadow-xl transition-all"
-                  size="lg"
-                >
-                  {skill.paymentOptions === 'exchange' ? 'Propose Exchange' : 'Enroll Now'}
-                </Button>
+                {isOwnSkill ? (
+                  <div className="p-4 bg-blue-50 border border-blue-200 rounded-xl">
+                    <div className="flex items-center justify-center text-blue-800 mb-2">
+                      <Shield className="h-5 w-5 mr-2" />
+                      <span className="font-medium">This is your skill</span>
+                    </div>
+                    <p className="text-sm text-blue-700">
+                      You cannot enroll in your own course. Share this link with others to get enrollments!
+                    </p>
+                  </div>
+                ) : (
+                  <>
+                    <Button
+                      onClick={handleEnrollAction}
+                      disabled={!user}
+                      className="w-full bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white font-semibold py-3 text-lg shadow-lg hover:shadow-xl transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                      size="lg"
+                    >
+                      {!user ? 'Sign In to Enroll' : 
+                       skill.paymentOptions === 'exchange' ? 'Propose Exchange' : 'Enroll Now'}
+                    </Button>
 
-                <div className="text-sm text-gray-600 space-y-2">
-                  <p>✅ Direct access to instructor</p>
-                  <p>✅ Flexible learning schedule</p>
-                  <p>✅ Certificate of completion</p>
-                </div>
+                    {!user && (
+                      <p className="text-xs text-gray-500">
+                        Please sign in to enroll in this course
+                      </p>
+                    )}
+                  </>
+                )}
+
+                {!isOwnSkill && (
+                  <div className="text-sm text-gray-600 space-y-2">
+                    <p>✅ Direct access to instructor</p>
+                    <p>✅ Flexible learning schedule</p>
+                    <p>✅ Certificate of completion</p>
+                  </div>
+                )}
               </CardContent>
             </Card>
 
@@ -593,9 +697,20 @@ export default function SkillDetailPage() {
                   )}
                 </div>
 
-                <Button variant="outline" className="w-full" onClick={handleContact}>
-                  Contact Instructor for Queries
-                </Button>
+                {isOwnSkill ? (
+                  <div className="text-center text-sm text-gray-600">
+                    This is your profile
+                  </div>
+                ) : (
+                  <Button 
+                    variant="outline" 
+                    className="w-full" 
+                    onClick={handleContact}
+                    disabled={!user}
+                  >
+                    {!user ? 'Sign In to Contact' : 'Contact Instructor for Queries'}
+                  </Button>
+                )}
               </CardContent>
             </Card>
           </div>
