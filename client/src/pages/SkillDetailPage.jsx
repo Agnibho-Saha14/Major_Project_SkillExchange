@@ -541,7 +541,7 @@ export default function SkillDetailPage() {
           {/* Sidebar */}
           <div className="sticky top-8 space-y-4">
             {/* Pricing Card */}
-            <Card className="bg-white/80 backdrop-blur-sm border-0 shadow-xl sticky top-8">
+            <Card className="bg-white/80 backdrop-blur-sm border-0 shadow-xl ">
               <CardHeader className="text-center">
                 <CardTitle className="text-2xl font-bold text-gray-900">
                   Get Started
