@@ -46,6 +46,40 @@ exports.getSkills = asyncHandler(async (req, res) => {
   });
 });
 
+// GET user's own skills (for dashboard)
+exports.getMySkills = asyncHandler(async (req, res) => {
+  const { userId } = getAuth(req);
+  if (!userId) {
+    return res.status(401).json({ success: false, message: 'Unauthorized' });
+  }
+
+  const { status = 'all', page = 1, limit = 10 } = req.query;
+  const filter = { ownerId: String(userId) };
+  
+  if (status !== 'all') {
+    filter.status = status;
+  }
+
+  const l = parseInt(limit);
+  const p = parseInt(page);
+
+  const [items, total] = await Promise.all([
+    Skill.find(filter).sort({ createdAt: -1 }).limit(l).skip((p - 1) * l),
+    Skill.countDocuments(filter)
+  ]);
+
+  res.json({
+    success: true,
+    data: items,
+    pagination: {
+      page: p,
+      limit: l,
+      total,
+      pages: Math.ceil(total / l)
+    }
+  });
+});
+
 // GET single skill
 exports.getSkillById = asyncHandler(async (req, res) => {
   const item = await Skill.findById(req.params.id);
@@ -54,6 +88,26 @@ exports.getSkillById = asyncHandler(async (req, res) => {
     throw new Error('Skill not found');
   }
   res.json({ success: true, data: item });
+});
+
+// GET skill for editing (only owner can access)
+exports.getSkillForEdit = asyncHandler(async (req, res) => {
+  const { userId } = getAuth(req);
+  if (!userId) {
+    return res.status(401).json({ success: false, message: 'Unauthorized' });
+  }
+
+  const skill = await Skill.findById(req.params.id);
+  if (!skill) {
+    res.status(404);
+    throw new Error('Skill not found');
+  }
+
+  if (String(skill.ownerId) !== String(userId)) {
+    return res.status(403).json({ success: false, message: 'You can only edit your own skills' });
+  }
+
+  res.json({ success: true, data: skill });
 });
 
 // CREATE skill
@@ -86,7 +140,7 @@ exports.createSkill = asyncHandler(async (req, res) => {
   res.status(201).json({ success: true, message: 'Skill created successfully', data: item });
 });
 
-// UPDATE skill
+// UPDATE skill (excluding price - price is fixed after creation)
 exports.updateSkill = asyncHandler(async (req, res) => {
   const { userId } = getAuth(req);
   const skill = await Skill.findById(req.params.id);
@@ -97,10 +151,16 @@ exports.updateSkill = asyncHandler(async (req, res) => {
   }
 
   if (String(skill.ownerId) !== String(userId)) {
-    return res.status(403).json({ success: false, message: 'Forbidden' });
+    return res.status(403).json({ success: false, message: 'You can only edit your own skills' });
   }
 
-  const updated = await Skill.findByIdAndUpdate(req.params.id, req.body, {
+  // Remove price from the update data to keep it fixed
+  const updateData = { ...req.body };
+  delete updateData.price; // Price cannot be updated
+  delete updateData.ownerId; // Owner cannot be changed
+  delete updateData.email; // Email cannot be changed
+
+  const updated = await Skill.findByIdAndUpdate(req.params.id, updateData, {
     new: true,
     runValidators: true
   });
@@ -119,7 +179,7 @@ exports.deleteSkill = asyncHandler(async (req, res) => {
   }
 
   if (String(skill.ownerId) !== String(userId)) {
-    return res.status(403).json({ success: false, message: 'Forbidden' });
+    return res.status(403).json({ success: false, message: 'You can only delete your own skills' });
   }
 
   await skill.deleteOne();
@@ -155,7 +215,7 @@ exports.publishSkill = asyncHandler(async (req, res) => {
   }
 
   if (String(skill.ownerId) !== String(userId)) {
-    return res.status(403).json({ success: false, message: 'Forbidden' });
+    return res.status(403).json({ success: false, message: 'You can only publish your own skills' });
   }
 
   skill.status = 'published';

@@ -4,26 +4,35 @@ import CTASection from "@/components/CTASection"
 import Pagination from "@/components/Pagination"
 import useSkills from "@/components/useSkills"
 import { BookOpen } from "lucide-react"
+import { useNavigate, Link } from "react-router-dom"
 
 export default function PostedSkills() {
   const { user, isLoaded } = useUser()
-  const {
-    skills,
-    loading,
-    error,
-    pagination,
-    changePage,
-    refetch
-  } = useSkills()
+  const navigate = useNavigate()
+  const { skills, loading, error, pagination, changePage } = useSkills()
 
-  // Filter skills to show only those posted by the logged-in user
+  // Filter skills posted by the logged-in user
   const postedSkills = skills.filter(
     skill => skill.email === user?.primaryEmailAddress?.emailAddress
   )
 
-  if (!isLoaded) return <div className="text-center py-8">Loading user...</div>
-  if (loading) return <div className="text-center py-8">Loading your skills...</div>
-  if (error) return <div className="text-red-600 text-center py-8">Error: {error}</div>
+  const handleEdit = (skillId) => {
+  // Navigate to edit page using the correct route
+  navigate(`/skills/${skillId}/edit`)
+}
+
+
+  if (!isLoaded) {
+    return <div className="text-center py-8">Loading user...</div>
+  }
+
+  if (loading) {
+    return <div className="text-center py-8">Loading your skills...</div>
+  }
+
+  if (error) {
+    return <div className="text-red-600 text-center py-8">Error: {error}</div>
+  }
 
   if (postedSkills.length === 0) {
     return (
@@ -32,12 +41,12 @@ export default function PostedSkills() {
         <h3 className="text-lg font-medium text-gray-900 mb-2">
           No skills posted yet
         </h3>
-        <a
-          href="/post-skill"
+        <Link
+          to="/post-skill"
           className="inline-flex items-center px-4 py-2 text-white bg-blue-600 hover:bg-blue-700 rounded-md"
         >
           Post Your First Skill
-        </a>
+        </Link>
       </div>
     )
   }
@@ -47,7 +56,12 @@ export default function PostedSkills() {
       {/* Posted Skills Grid */}
       <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
         {postedSkills.map(skill => (
-          <SkillCard key={skill._id} skill={skill} />
+          <SkillCard 
+            key={skill._id} 
+            skill={skill} 
+            showEditButton={true}
+            onEdit={handleEdit}
+          />
         ))}
       </div>
 

@@ -1,23 +1,31 @@
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { IndianRupee, Clock, Users } from "lucide-react"
+import { IndianRupee, Clock, Users, Edit } from "lucide-react"
 import StarRating from "./starRating"
 import PriceDisplay from "./priceDisplay"
 import { useNavigate } from "react-router-dom"
 import { useUser } from "@clerk/clerk-react"
 
-export default function SkillCard({ skill }) {
-
+export default function SkillCard({ skill, showEditButton = false, onEdit }) {
   const { isSignedIn } = useUser();
-  const navigate=useNavigate();
+  const navigate = useNavigate();
+  
   function handleSignIn(){
     if(!isSignedIn){
       navigate("/login")
-    }
-     else {
+    } else {
       navigate(`/skills/${skill._id}`);
     }
   }
+
+  function handleEdit() {
+    if (onEdit) {
+      onEdit(skill._id);
+    } else {
+      navigate(`/skills/${skill._id}/edit`);
+    }
+  }
+  
   return (
     <Card className="h-full hover:shadow-xl transition-all duration-300 border-0 bg-white/80 backdrop-blur-sm hover:bg-white group">
       <CardHeader className="pb-3">
@@ -25,9 +33,21 @@ export default function SkillCard({ skill }) {
           <span className="px-3 py-1 bg-indigo-100 text-indigo-700 text-xs font-medium rounded-full">
             {skill.category}
           </span>
-          <span className="px-2 py-1 bg-green-100 text-green-700 text-xs font-medium rounded-full">
-            {skill.level}
-          </span>
+          <div className="flex items-center gap-2">
+            <span className="px-2 py-1 bg-green-100 text-green-700 text-xs font-medium rounded-full">
+              {skill.level}
+            </span>
+            {showEditButton && (
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={handleEdit}
+                className="h-6 w-6 p-0 rounded-full hover:bg-indigo-50"
+              >
+                <Edit className="h-3 w-3 mr-0.5 text-gray-600 hover:text-indigo-600" />
+              </Button>
+            )}
+          </div>
         </div>
         <CardTitle className="text-xl font-bold text-gray-900 group-hover:text-indigo-600 transition-colors line-clamp-2">
           {skill.title}
@@ -59,18 +79,35 @@ export default function SkillCard({ skill }) {
           </div>
         </div>
 
-        <div className="flex items-center justify-between pt-4 border-t border-gray-200">
-          <div className="flex items-center">
+        <div className="flex items-center justify-between pt-4 border-t border-gray-200 flex-wrap">
+          <div className="flex items-center mb-2 sm:mb-0">
             <PriceDisplay 
               price={skill.price}
               paymentOptions={skill.paymentOptions}
             />
           </div>
           
-            <Button onClick={handleSignIn} className="bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white font-semibold px-6 py-2 rounded-lg transition-all">
+          <div className="flex gap-5 flex-wrap justify-end w-full sm:w-auto">
+            {showEditButton && (
+              <Button 
+                onClick={handleEdit}
+                variant="outline"
+                size="xs"
+                className=" text-indigo-600 hover:bg-indigo-50 flex items-center gap-2 border-0"
+              >
+                <Edit className="h-3 w-3 p-1" />
+                Edit
+              </Button>
+            )}
+            <Button 
+              onClick={handleSignIn} 
+              className={`bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white font-semibold rounded-lg transition-all ${
+                showEditButton ? "text-sm px-3 py-1" : "px-4 py-2"
+              }`}
+            >
               View Details
             </Button>
-          
+          </div>
         </div>
       </CardContent>
     </Card>
