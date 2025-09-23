@@ -8,7 +8,9 @@ const {
   saveDraft,
   publishSkill,
   addRating,
-  getRatings
+  getRatings,
+  getMySkills,
+  getSkillForEdit,
 } = require('../controllers/skillController');
 
 const router = express.Router();
@@ -33,5 +35,6 @@ router.patch('/:id/publish', publishSkill);
 router.get('/:id', getSkillById);
 router.put('/:id', updateSkill);
 router.delete('/:id', deleteSkill);
+router.get('/:id/edit', getSkillForEdit)
 
 module.exports = router;
