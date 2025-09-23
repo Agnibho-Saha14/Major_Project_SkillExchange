@@ -42,9 +42,9 @@ export default function SkillCard({ skill, showEditButton = false, onEdit }) {
                 size="sm"
                 variant="outline"
                 onClick={handleEdit}
-                className="h-6 w-6 p-0 rounded-full border-gray-300 hover:border-indigo-500 hover:bg-indigo-50"
+                className="h-6 w-6 p-0 rounded-full hover:bg-indigo-50"
               >
-                <Edit className="h-3 w-3 text-gray-600 hover:text-indigo-600" />
+                <Edit className="h-3 w-3 mr-0.5 text-gray-600 hover:text-indigo-600" />
               </Button>
             )}
           </div>
@@ -79,27 +79,32 @@ export default function SkillCard({ skill, showEditButton = false, onEdit }) {
           </div>
         </div>
 
-        <div className="flex items-center justify-between pt-4 border-t border-gray-200">
-          <div className="flex items-center">
+        <div className="flex items-center justify-between pt-4 border-t border-gray-200 flex-wrap">
+          <div className="flex items-center mb-2 sm:mb-0">
             <PriceDisplay 
               price={skill.price}
               paymentOptions={skill.paymentOptions}
             />
           </div>
           
-          <div className="flex gap-2">
+          <div className="flex gap-5 flex-wrap justify-end w-full sm:w-auto">
             {showEditButton && (
               <Button 
                 onClick={handleEdit}
                 variant="outline"
-                size="sm"
-                className="border-indigo-200 text-indigo-600 hover:bg-indigo-50 hover:border-indigo-300"
+                size="xs"
+                className=" text-indigo-600 hover:bg-indigo-50 flex items-center gap-2 border-0"
               >
-                <Edit className="h-4 w-4 mr-1" />
+                <Edit className="h-3 w-3 p-1" />
                 Edit
               </Button>
             )}
-            <Button onClick={handleSignIn} className="bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white font-semibold px-4 py-2 rounded-lg transition-all">
+            <Button 
+              onClick={handleSignIn} 
+              className={`bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white font-semibold rounded-lg transition-all ${
+                showEditButton ? "text-sm px-3 py-1" : "px-4 py-2"
+              }`}
+            >
               View Details
             </Button>
           </div>
