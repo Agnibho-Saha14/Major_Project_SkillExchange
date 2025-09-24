@@ -495,7 +495,7 @@ const submitSkill = async (endpoint, successMessage, setLoadingState) => {
                       Saving...
                     </>
                   ) : (
-                    'Save as Draft'
+                    'Save as Draft(Comming Soon)'
                   )}
                 </Button>
                 <Button 

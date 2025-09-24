@@ -310,7 +310,7 @@ export default function SkillDetailPage() {
         <div className="space-y-2">
           <div className="flex items-center text-green-600">
             <IndianRupee className="h-5 w-5 mr-1" />
-            <span className="text-xl font-bold">₹{price}</span>
+            <span className="text-xl font-bold">{price}</span>
             <span className="text-sm ml-1">/course</span>
           </div>
           <div className="flex items-center text-blue-600 text-sm">
