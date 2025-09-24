@@ -3,6 +3,7 @@ import { useUser } from "@clerk/clerk-react"
 import Navbar from "../components/Navbar"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import PostedSkills from "./PostedSkills"
+import EnrolledSkills from "./EnrolledSkills" // ADDED: Import the new component
 
 export default function DashboardPage() {
   const [tab, setTab] = useState("posted")
@@ -41,9 +42,8 @@ export default function DashboardPage() {
           </TabsContent>
 
           <TabsContent value="enrolled">
-            <div className="text-center py-12">
-              <h3 className="text-lg font-medium text-gray-900 mb-2">Enrolled skills will be shown here</h3>
-            </div>
+            {/* MODIFIED: Use the EnrolledSkills component */}
+            <EnrolledSkills /> 
           </TabsContent>
         </Tabs>
       </div>
