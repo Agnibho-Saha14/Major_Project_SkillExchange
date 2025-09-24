@@ -1,8 +1,12 @@
+// devjit-mondal/major_project_skillexchange/Major_Project_SkillExchange-1a99f7f7ffeefaca2991ec6ef052b6bb41ca4d1c/client/src/pages/PaymentSuccess.jsx
+
 import React, { useState, useEffect, useRef } from "react";
 import { useSearchParams } from "react-router-dom";
 import jsPDF from "jspdf";
 import html2canvas from "html2canvas";
 import PrintableReceipt from "@/components/PrintableReceipt";
+// ADDED: Import useAuth
+import { useAuth, useUser } from '@clerk/clerk-react'; // useAuth is needed for getToken
 
 const PaymentSuccess = () => {
   const API_BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:5000/api";
@@ -10,8 +14,19 @@ const PaymentSuccess = () => {
   const skillId = searchParams.get("skillId");
   const [skill, setSkill] = useState(null);
   const printableRef = useRef();
+  // ADDED: Get Clerk authentication functions
+  const { getToken } = useAuth();
+  const { isLoaded, isSignedIn } = useUser();
+
 
   useEffect(() => {
+    // Only proceed if Clerk is loaded and user is signed in
+    if (!isLoaded || !isSignedIn) {
+        // Optionally redirect or show error if not authenticated, 
+        // though typically payment success implies successful sign-in.
+        return; 
+    }
+
     const fetchSkillDetails = async () => {
       try {
         const response = await fetch(`${API_BASE_URL}/skills/${skillId}`);
@@ -23,14 +38,41 @@ const PaymentSuccess = () => {
         console.error("Error fetching skill details:", err);
       }
     };
+    
+    // --- MODIFIED FUNCTION TO COMPLETE ENROLLMENT ---
+    const completeEnrollment = async (sId) => {
+      const token = await getToken(); // ADDED: Fetch JWT token
+
+      try {
+        const response = await fetch(`${API_BASE_URL}/enrollments/complete`, {
+            method: 'POST',
+            headers: { 
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${token}` // ADDED: Include the token
+            },
+            body: JSON.stringify({ skillId: sId }),
+        });
+        const result = await response.json();
+        if (!result.success) {
+            console.error("Failed to mark enrollment as complete:", result.message);
+        } else {
+            console.log("Enrollment successfully recorded.");
+        }
+      } catch (err) {
+          console.error("Error completing enrollment:", err);
+      }
+    };
+    // -------------------------------------------------
 
     if (skillId) {
       fetchSkillDetails();
+      completeEnrollment(skillId);
     }
-  }, [skillId, API_BASE_URL]);
+  // MODIFIED: Added Clerk dependencies to useEffect
+  }, [skillId, API_BASE_URL, isLoaded, isSignedIn, getToken]); 
 
   const downloadPDF = async () => {
-    const element = printableRef.current;
+  const element = printableRef.current;
     if (!element) return;
 
     const canvas = await html2canvas(element, {
@@ -57,6 +99,7 @@ const PaymentSuccess = () => {
     );
   }
 
+  // ... (rest of the return JSX)
   return (
     <div className="min-h-screen bg-gray-50 py-12 px-4">
       <PrintableReceipt ref={printableRef} skill={skill} />
