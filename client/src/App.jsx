@@ -12,6 +12,7 @@ import Signup from "./pages/Signup"
 import ContactInstructor from "./pages/ContactInstructor"
 import ProtectedRoute from "./ProtectedRoute"
 import EditSkillPage from './pages/EditSkills'
+import PaymentSuccess from "./pages/PaymentSuccess"
 
 export default function App() {
   return (
@@ -29,6 +30,7 @@ export default function App() {
         <Route path="/signup" element={<Signup/>} />
         <Route path="/contact" element={<ContactInstructor/>}/>
         <Route path="/skills/:id/edit" element={<EditSkillPage />} />
+        <Route path="/payment-success/" element={<PaymentSuccess/>}/>
       </Routes>
       
     </Router>
