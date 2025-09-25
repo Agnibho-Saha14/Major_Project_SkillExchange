@@ -1,12 +1,10 @@
-// devjit-mondal/major_project_skillexchange/Major_Project_SkillExchange-1a99f7f7ffeefaca2991ec6ef052b6bb41ca4d1c/client/src/pages/PaymentSuccess.jsx
-
 import React, { useState, useEffect, useRef } from "react";
 import { useSearchParams } from "react-router-dom";
 import jsPDF from "jspdf";
 import html2canvas from "html2canvas";
 import PrintableReceipt from "@/components/PrintableReceipt";
-// ADDED: Import useAuth
-import { useAuth, useUser } from '@clerk/clerk-react'; // useAuth is needed for getToken
+import emailjs from "emailjs-com";
+import { useAuth, useUser } from '@clerk/clerk-react';
 
 const PaymentSuccess = () => {
   const API_BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:5000/api";
@@ -14,18 +12,14 @@ const PaymentSuccess = () => {
   const skillId = searchParams.get("skillId");
   const [skill, setSkill] = useState(null);
   const printableRef = useRef();
-  // ADDED: Get Clerk authentication functions
   const { getToken } = useAuth();
-  const { isLoaded, isSignedIn } = useUser();
+  const { isLoaded, isSignedIn, user } = useUser();
+  const emailSentRef = useRef(false);
+  const [loading, setLoading] = useState(true);
 
-
+  // Fetch skill details
   useEffect(() => {
-    // Only proceed if Clerk is loaded and user is signed in
-    if (!isLoaded || !isSignedIn) {
-        // Optionally redirect or show error if not authenticated, 
-        // though typically payment success implies successful sign-in.
-        return; 
-    }
+    if (!skillId) return;
 
     const fetchSkillDetails = async () => {
       try {
@@ -38,48 +32,72 @@ const PaymentSuccess = () => {
         console.error("Error fetching skill details:", err);
       }
     };
-    
-    // --- MODIFIED FUNCTION TO COMPLETE ENROLLMENT ---
-    const completeEnrollment = async (sId) => {
-      const token = await getToken(); // ADDED: Fetch JWT token
 
+    fetchSkillDetails();
+  }, [skillId, API_BASE_URL]);
+
+  // Complete enrollment and send email after success
+  useEffect(() => {
+    if (!isLoaded || !isSignedIn || !skill || !user) return;
+
+    const completeEnrollmentAndNotify = async () => {
       try {
+        const token = await getToken();
         const response = await fetch(`${API_BASE_URL}/enrollments/complete`, {
-            method: 'POST',
-            headers: { 
-              'Content-Type': 'application/json',
-              'Authorization': `Bearer ${token}` // ADDED: Include the token
-            },
-            body: JSON.stringify({ skillId: sId }),
+          method: 'POST',
+          headers: { 
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          },
+          body: JSON.stringify({ skillId }),
         });
+
         const result = await response.json();
+
         if (!result.success) {
-            console.error("Failed to mark enrollment as complete:", result.message);
+          console.error("Failed to mark enrollment as complete:", result.message);
         } else {
-            console.log("Enrollment successfully recorded.");
+          console.log("Enrollment successfully recorded.");
+
+          // Send email only once and if user has a primary email
+          if (!emailSentRef.current && user.primaryEmailAddress?.emailAddress) {
+            const templateParams = {
+              to_email: user.primaryEmailAddress.emailAddress,
+              from_name: "SkillExchange",
+              to_name: user.fullName,
+              title:`${skill.title}`,
+              name:"SkillExchange",
+              message: `You have successfully enrolled in the course: "${skill.title}".`,
+            };
+
+            emailjs.send(
+              import.meta.env.VITE_EMAILJS_SERVICE_ID,
+              import.meta.env.VITE_EMAILJS_ENROLL_TEMPLATE_ID,
+              templateParams,
+              import.meta.env.VITE_EMAILJS_PUBLIC_KEY
+            ).then(
+              (res) => {
+                console.log("Enrollment email sent!", res.status, res.text);
+                emailSentRef.current = true;
+              },
+              (err) => console.error("Failed to send email:", err)
+            );
+          }
         }
       } catch (err) {
-          console.error("Error completing enrollment:", err);
+        console.error("Error completing enrollment:", err);
+      } finally {
+        setLoading(false);
       }
     };
-    // -------------------------------------------------
 
-    if (skillId) {
-      fetchSkillDetails();
-      completeEnrollment(skillId);
-    }
-  // MODIFIED: Added Clerk dependencies to useEffect
-  }, [skillId, API_BASE_URL, isLoaded, isSignedIn, getToken]); 
+    completeEnrollmentAndNotify();
+  }, [skill, isLoaded, isSignedIn, user, getToken, skillId, API_BASE_URL]);
 
   const downloadPDF = async () => {
-  const element = printableRef.current;
-    if (!element) return;
+    if (!printableRef.current) return;
 
-    const canvas = await html2canvas(element, {
-      scale: 2,
-      useCORS: true,
-    });
-
+    const canvas = await html2canvas(printableRef.current, { scale: 2, useCORS: true });
     const data = canvas.toDataURL("image/png");
     const pdf = new jsPDF("p", "mm", "a4");
     const imgProps = pdf.getImageProperties(data);
@@ -91,15 +109,14 @@ const PaymentSuccess = () => {
     pdf.save("receipt.pdf");
   };
 
-  if (!skill) {
+  if (loading || !skill) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-gray-100">
-        <p className="text-lg text-gray-600">Loading your receipt...</p>
+        <p className="text-lg text-gray-600">Processing your enrollment...</p>
       </div>
     );
   }
 
-  // ... (rest of the return JSX)
   return (
     <div className="min-h-screen bg-gray-50 py-12 px-4">
       <PrintableReceipt ref={printableRef} skill={skill} />
@@ -120,8 +137,8 @@ const PaymentSuccess = () => {
           <div className="grid grid-cols-2 gap-x-8 gap-y-4 text-sm mb-8">
             <div>
               <p className="text-gray-500">Billed To:</p>
-              <p className="font-medium text-gray-800">Student Name</p>
-              <p className="text-gray-800">student@example.com</p>
+              <p className="font-medium text-gray-800">{user.fullName}</p>
+              <p className="text-gray-800">{user.primaryEmailAddress?.emailAddress}</p>
             </div>
             <div className="text-right">
               <p className="text-gray-500">Transaction ID:</p>
