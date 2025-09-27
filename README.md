@@ -1,118 +1,175 @@
+# Skill Exchange
 
-# 🌟 Skill Exchange
+Skill Exchange is a full-stack web application that allows users to share, discover, and exchange skills. It provides an interactive platform where learners and teachers can connect, post skills, and collaborate. This project is built with the MERN stack (MongoDB, Express.js, React, Node.js) and utilizes modern tools like Vite for the frontend, TailwindCSS for styling, and Clerk for authentication.
 
-Skill Exchange is a modern web platform that allows users to **share, discover, and exchange skills**.
-It provides an interactive dashboard where learners and teachers can connect, post skills, and collaborate.
+## About The Project
 
-Built with **React 19, Vite, TailwindCSS v4, Radix UI, and Clerk Authentication**.
+The Skill Exchange platform is designed to create a community of learners and educators. Users can sign up, create a profile, and then either offer their skills to others or browse for skills they want to learn. The platform supports both paid and skill-exchange models, providing flexibility for users. A key feature is the user dashboard, where individuals can manage their posted skills and track the skills they have enrolled in.
 
----
+### Built With
 
-## 🚀 Features
+  * **Frontend:**
+      * React 19
+      * Vite
+      * React Router 7
+      * TailwindCSS v4
+      * Radix UI & ShadCN
+      * Lucide React (for icons)
+  * **Backend:**
+      * Node.js
+      * Express.js
+      * MongoDB with Mongoose
+      * Stripe for payments
+  * **Authentication:**
+      * Clerk
+  * **Emailing:**
+       * EmailJS
 
-* 🔑 **User Authentication** with [Clerk](https://clerk.com)
-* 📝 **Publish Skills** – Share your expertise by posting new skills
-* 🔍 **Browse Skills** – Explore skills posted by other users
-* 📊 **Dashboard** – Manage your posted and acquired skills
-* 🎨 **Modern UI/UX** using TailwindCSS, Radix UI, and ShadCN utilities
-* 🖼️ **Lucide Icons** for a sleek interface
-* ⚡ **Fast and optimized development** with Vite
+## Architecture
 
----
+This project follows a classic MERN stack architecture:
 
-## 🛠️ Tech Stack
+  * **MongoDB:** A NoSQL database used to store all the application data, including users, skills, and enrollments.
+  * **Express.js:** A web application framework for Node.js that provides a robust set of features for building the backend API.
+  * **React:** A JavaScript library for building the user interface. The frontend is a single-page application built with React and Vite.
+  * **Node.js:** A JavaScript runtime environment that allows us to run the Express server.
 
-* **Frontend:** [React 19](https://react.dev/) + [React Router 7](https://reactrouter.com/)
-* **Build Tool:** [Vite](https://vitejs.dev/)
-* **Styling:** [TailwindCSS v4](https://tailwindcss.com/), [Radix UI](https://www.radix-ui.com/), ShadCN utilities
-* **Auth:** [Clerk](https://clerk.com/)
-* **Icons:** [Lucide React](https://lucide.dev/)
-* **Linting:** ESLint with React plugins
+## Getting Started
 
----
+To get a local copy up and running, follow these simple steps.
 
-## 📦 Installation & Setup
+### Prerequisites
 
-1. **Clone the repository**
+  * npm
+    ```sh
+    npm install npm@latest -g
+    ```
+  * Node.js
+  * MongoDB Atlas account (or a local MongoDB instance)
+  * Clerk account for authentication keys
+  * Stripe account for payment processing
+  * EmailJS account for email services
 
-   ```bash
-   git clone https://github.com/Agnibho-Saha14/Major_Project_SkillExchange.git
-   cd Major_Project_SkillExchange
-   cd client
-   ```
+### Installation
 
-2. **Install dependencies**
+1.  **Clone the repo**
 
-   ```bash
-   npm install
-   ```
+    ```sh
+    git clone https://github.com/Agnibho-Saha14/Major_Project_SkillExchange.git
+    ```
 
-3. **Set up environment variables**
+2.  **Install NPM packages for the server**
 
-   Create a `.env` file in the root directory and add your Clerk keys:
+    ```sh
+    cd Major_Project_SkillExchange/server
+    npm install
+    ```
 
-   ```env
-   VITE_CLERK_PUBLISHABLE_KEY=your-clerk-publishable-key
-   ```
+3.  **Install NPM packages for the client**
 
-4. **Start the development server**
+    ```sh
+    cd ../client
+    npm install
+    ```
 
-   ```bash
-   npm run dev
-   ```
+4.  **Set up environment variables**
 
-   The app will be available at 👉 [http://localhost:5173](http://localhost:5173)
+    Create a `.env` file in the `server` directory and add the following:
 
+    ```env
+    MONGODB_URI=your_mongodb_connection_string
+    PORT=5000
+    STRIPE_SECRET_KEY=your_stripe_secret_key
+    CLIENT_URL=http://localhost:5173
+    ```
 
----
+    Create a `.env` file in the `client` directory and add the following:
 
-## 📂 Project Structure
+    ```env
+    VITE_CLERK_PUBLISHABLE_KEY=your-clerk-publishable-key
+    VITE_STRIPE_PUBLISHABLE_KEY=your_stripe_publishable_key
+    VITE_API_URL=http://localhost:5000/api
+    VITE_EMAILJS_SERVICE_ID=your_emailjs_service_id
+    VITE_EMAILJS_TEMPLATE_ID=your_emailjs_template_id
+    VITE_EMAILJS_ENROLL_TEMPLATE_ID=your_emailjs_template_id  //for enrollment specific email
+    VITE_EMAILJS_USER_ID=your_emailjs_user_id
+    ```
+
+5.  **Start the development servers**
+
+    In the `server` directory, run:
+
+    ```sh
+    npm start
+    ```
+
+    In the `client` directory, run:
+
+    ```sh
+    npm run dev
+    ```
+
+## Features
+
+  * **User Authentication:** Secure sign-up and login functionality provided by Clerk.
+  * **Publish Skills:** Users can post new skills they want to teach, providing details like category, level, duration, and cost.
+  * **Browse Skills:** A comprehensive page where users can explore all the available skills, with filtering and pagination.
+  * **Dashboard:** A personal dashboard for users to manage their posted and enrolled skills.
+  * **Skill Details:** A detailed view for each skill, showing all relevant information and allowing users to enroll or contact the instructor.
+  * **Payment Integration:** Secure payment processing with Stripe for enrolling in paid courses.
+  * **Skill Exchange:** The option to propose a skill exchange instead of a monetary payment.
+
+## API Endpoints
+
+The backend server exposes the following RESTful API endpoints:
+
+  * `GET /api/skills`: Fetches all published skills with filtering and pagination.
+  * `GET /api/skills/:id`: Fetches a single skill by its ID.
+  * `POST /api/skills`: Creates a new skill.
+  * `PUT /api/skills/:id`: Updates an existing skill.
+  * `DELETE /api/skills/:id`: Deletes a skill.
+  * `GET /api/categories`: Fetches all unique skill categories.
+  * `POST /api/payments/checkout`: Creates a Stripe checkout session for a skill enrollment.
+  * `POST /api/enrollments/complete`: Marks an enrollment as complete after a successful payment.
+  * `GET /api/enrollments/my-skills`: Fetches all skills a user is enrolled in.
+
+## Project Structure
 
 ```
-client
-src/
-├── components/        # Reusable UI components (ShadCN + Radix)
-│   └── ui/            # Button, Card, Tabs, etc.
-├── pages/             # Application pages
-│   ├── Homepage.jsx
-│   ├── BrowseSkillsPage.jsx
-│   ├── PublishSkillPage.jsx
-│   ├── DashboardPage.jsx
-│   └── SkillDetailPage.jsx
-├── App.jsx            # App routes
-├── main.jsx           # React entry point
-└── index.css          # Tailwind styles
+.
+├── client
+│   ├── public
+│   ├── src
+│   │   ├── components
+│   │   ├── pages
+│   │   ├── App.jsx
+│   │   └── main.jsx
+│   ├── index.html
+│   └── package.json
+└── server
+    ├── config
+    ├── controllers
+    ├── middleware
+    ├── models
+    ├── routes
+    ├── app.js
+    └── server.js
 ```
 
----
+## Contributing
 
-## 🧑‍💻 Scripts
+Contributions are what make the open-source community such an amazing place to learn, inspire, and create. Any contributions you make are **greatly appreciated**.
 
-* `npm run dev` → Start dev server
-* `npm run build` → Build for production
-* `npm run preview` → Preview production build
-* `npm run lint` → Run ESLint
+1.  Fork the Project
+2.  Create your Feature Branch (`git checkout -b feature/AmazingFeature`)
+3.  Commit your Changes (`git commit -m 'Add some AmazingFeature'`)
+4.  Push to the Branch (`git push origin feature/AmazingFeature`)
+5.  Open a Pull Request
 
----
+## License
 
-## 🤝 Contributing
+Distributed under the MIT License. See `LICENSE` for more information.
 
-Contributions are welcome!
-To contribute:
+## Contact
 
-1. Fork the repo
-2. Create your feature branch (`git checkout -b feature-name`)
-3. Commit changes (`git commit -m 'Add feature'`)
-4. Push to your branch (`git push origin feature-name`)
-5. Open a Pull Request
-
----
-
-## 📜 License
-
-This project is licensed under the **MIT License**.
-You’re free to use, modify, and distribute this project.
-
----
-
-
+Project Link: [https://github.com/Agnibho-Saha14/Major\_Project\_SkillExchange](https://www.google.com/search?q=https://github.com/Agnibho-Saha14/Major_Project_SkillExchange)
