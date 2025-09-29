@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
 import { loadStripe } from '@stripe/stripe-js';
-import { useUser } from '@clerk/clerk-react';
+import { useUser, useAuth } from '@clerk/clerk-react';
 
 const stripePromise = loadStripe(import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY);
 import {
@@ -245,6 +245,7 @@ function RatingSection({ skillId, averageRating, totalRatings, onRatingUpdate, i
 /* ---------- SkillDetailPage ---------- */
 export default function SkillDetailPage() {
   const { user, isLoaded: userLoaded } = useUser();
+  const { getToken } = useAuth();
   const navigate = useNavigate();
   const [skillId, setSkillId] = useState('');
   
@@ -257,6 +258,8 @@ export default function SkillDetailPage() {
   const [skill, setSkill] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [isEnrolled, setIsEnrolled] = useState(false);
+  const [enrollmentLoading, setEnrollmentLoading] = useState(false);
 
   // Check if current user is the skill owner
   const isOwnSkill = userLoaded && user && skill && 
@@ -284,12 +287,48 @@ export default function SkillDetailPage() {
     }
   };
 
+  const checkEnrollmentStatus = async () => {
+    if (!userLoaded || !user || !skillId) {
+      setIsEnrolled(false);
+      return;
+    }
+
+    setEnrollmentLoading(true);
+
+    try {
+      const token = await getToken();
+      const response = await fetch(`${API_BASE_URL}/enrollments/check/${skillId}`, {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+      
+      const result = await response.json();
+      
+      if (response.ok && result.success) {
+        setIsEnrolled(result.data.isEnrolled);
+      } else {
+        setIsEnrolled(false);
+      }
+    } catch (err) {
+      console.error('Error checking enrollment status:', err);
+      setIsEnrolled(false);
+    } finally {
+      setEnrollmentLoading(false);
+    }
+  };
+
   useEffect(() => {
     if (skillId) {
       fetchSkillDetails();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [skillId]);
+
+  useEffect(() => {
+    checkEnrollmentStatus();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [userLoaded, user, skillId, getToken]);
 
   const handleRatingUpdate = (updatedSkill) => {
     setSkill(prev => ({ ...prev, ...updatedSkill }));
@@ -344,6 +383,12 @@ export default function SkillDetailPage() {
       return;
     }
 
+    // Check if already enrolled
+    if (isEnrolled) {
+      alert('You are already enrolled in this course.');
+      return;
+    }
+
     try {
       const stripe = await stripePromise;
 
@@ -380,6 +425,12 @@ export default function SkillDetailPage() {
     // Check if user is authenticated
     if (!userLoaded || !user) {
       alert('Please sign in to propose an exchange.');
+      return;
+    }
+
+    // Check if already enrolled
+    if (isEnrolled) {
+      alert('You are already enrolled in this course.');
       return;
     }
 
@@ -484,6 +535,12 @@ export default function SkillDetailPage() {
                       <span className="px-3 py-1 bg-yellow-500 text-white text-xs font-medium rounded-full flex items-center">
                         <Shield className="h-3 w-3 mr-1" />
                         Your Skill
+                      </span>
+                    )}
+                    {isEnrolled && !isOwnSkill && (
+                      <span className="px-3 py-1 bg-green-500 text-white text-xs font-medium rounded-full flex items-center">
+                        <CheckCircle className="h-3 w-3 mr-1" />
+                        Enrolled
                       </span>
                     )}
                   </div>
@@ -624,7 +681,7 @@ export default function SkillDetailPage() {
             <Card className="bg-white/80 backdrop-blur-sm border-0 shadow-xl">
               <CardHeader className="text-center">
                 <CardTitle className="text-2xl font-bold text-gray-900">
-                  {isOwnSkill ? 'Your Skill' : 'Get Started'}
+                  {isOwnSkill ? 'Your Skill' : isEnrolled ? 'Already Enrolled' : 'Get Started'}
                 </CardTitle>
               </CardHeader>
               <CardContent className="text-center space-y-4">
@@ -642,15 +699,30 @@ export default function SkillDetailPage() {
                       You cannot enroll in your own course. Share this link with others to get enrollments!
                     </p>
                   </div>
+                ) : isEnrolled ? (
+                  <div className="p-4 bg-green-50 border border-green-200 rounded-xl">
+                    <div className="flex items-center justify-center text-green-800 mb-2">
+                      <CheckCircle className="h-5 w-5 mr-2" />
+                      <span className="font-medium">You're enrolled!</span>
+                    </div>
+                    <p className="text-sm text-green-700">
+                      You have access to this skill. Contact the instructor to coordinate learning sessions.
+                    </p>
+                  </div>
                 ) : (
                   <>
                     <Button
                       onClick={handleEnrollAction}
-                      disabled={!user}
+                      disabled={!user || enrollmentLoading}
                       className="w-full bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white font-semibold py-3 text-lg shadow-lg hover:shadow-xl transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                       size="lg"
                     >
-                      {!user ? 'Sign In to Enroll' : 
+                      {enrollmentLoading ? (
+                        <>
+                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                          Checking...
+                        </>
+                      ) : !user ? 'Sign In to Enroll' : 
                        skill.paymentOptions === 'exchange' ? 'Propose Exchange' : 'Enroll Now'}
                     </Button>
 
@@ -662,7 +734,7 @@ export default function SkillDetailPage() {
                   </>
                 )}
 
-                {!isOwnSkill && (
+                {!isOwnSkill && !isEnrolled && (
                   <div className="text-sm text-gray-600 space-y-2">
                     <p>✅ Direct access to instructor</p>
                     <p>✅ Flexible learning schedule</p>

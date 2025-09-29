@@ -3,8 +3,7 @@ const { getAuth } = require('@clerk/express');
 const Enrollment = require('../models/Enrollment');
 const Skill = require('../models/Skill');
 
-// POST /api/enrollments/complete
-// Called from client/src/pages/PaymentSuccess.jsx
+
 exports.completeEnrollment = asyncHandler(async (req, res) => {
   const { userId } = getAuth(req);
   const { skillId } = req.body; 
@@ -33,8 +32,6 @@ exports.completeEnrollment = asyncHandler(async (req, res) => {
   res.status(201).json({ success: true, message: 'Enrollment successful', data: enrollment });
 });
 
-// GET /api/enrollments/my-skills
-// Called from client/src/pages/EnrolledSkills.jsx
 exports.getEnrolledSkills = asyncHandler(async (req, res) => {
   const { userId } = getAuth(req);
   if (!userId) {
@@ -52,4 +49,41 @@ exports.getEnrolledSkills = asyncHandler(async (req, res) => {
     .map(e => e.skillId);
 
   res.json({ success: true, data: enrolledSkills });
+});
+
+exports.checkEnrollmentStatus = asyncHandler(async (req, res) => {
+  const { userId } = getAuth(req);
+  const { skillId } = req.params;
+
+  if (!userId) {
+    return res.status(401).json({ success: false, message: 'Unauthorized' });
+  }
+
+  if (!skillId) {
+    return res.status(400).json({ success: false, message: 'Missing skillId' });
+  }
+
+  // Check if the skill exists
+  const skill = await Skill.findById(skillId);
+  if (!skill) {
+    return res.status(404).json({ success: false, message: 'Skill not found' });
+  }
+
+  // Check if user is enrolled in this skill
+  const enrollment = await Enrollment.findOne({
+    userId: String(userId),
+    skillId: skillId,
+    status: 'enrolled'
+  });
+
+  const isEnrolled = !!enrollment;
+
+  res.json({
+    success: true,
+    data: {
+      isEnrolled,
+      skillId,
+      enrollmentDate: enrollment ? enrollment.dateEnrolled : null
+    }
+  });
 });
