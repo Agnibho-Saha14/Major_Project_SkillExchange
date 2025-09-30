@@ -28,7 +28,7 @@ const skillSchema = new mongoose.Schema(
     category: { type: String, required: true, trim: true },
     level: { type: String, required: true, enum: ['Beginner', 'Intermediate', 'Advanced'] },
     duration: { type: String, required: true, trim: true },
-    timePerWeek: { type: String, required: true, trim: true },
+    timePerWeek: { type: Number, required: true, trim: true },
     price: { type: Number, default: 0 },
     priceType: { type: String, enum: ['course'] },
     paymentOptions: { type: String, required: true, enum: ['paid', 'exchange', 'both'] },

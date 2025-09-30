@@ -73,8 +73,8 @@ export default function SkillCard({ skill, showEditButton = false, onEdit }) {
               <span>{skill.duration}</span>
             </div>
             <div className="flex items-center">
-              <Users className="h-4 w-4 mr-1" />
-              <span>{skill.timePerWeek}/week</span>
+              
+              <span>{skill.timePerWeek} hours/week</span>
             </div>
           </div>
         </div>
