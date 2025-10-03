@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from "react";
-import { useSearchParams } from "react-router-dom";
+import { useSearchParams,useNavigate } from "react-router-dom";
 import jsPDF from "jspdf";
 import html2canvas from "html2canvas";
 import PrintableReceipt from "@/components/PrintableReceipt";
@@ -10,11 +10,13 @@ const PaymentSuccess = () => {
   const API_BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:5000/api";
   const [searchParams] = useSearchParams();
   const skillId = searchParams.get("skillId");
+  const sessionId = searchParams.get("sessionId");
   const [skill, setSkill] = useState(null);
   const printableRef = useRef();
   const { getToken } = useAuth();
   const { isLoaded, isSignedIn, user } = useUser();
   const emailSentRef = useRef(false);
+  const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
 
   // Fetch skill details
@@ -93,7 +95,9 @@ const PaymentSuccess = () => {
 
     completeEnrollmentAndNotify();
   }, [skill, isLoaded, isSignedIn, user, getToken, skillId, API_BASE_URL]);
-
+  const redirectSkillPage = () => {
+    navigate(`/skills/${skillId}`);
+  }
   const downloadPDF = async () => {
     if (!printableRef.current) return;
 
@@ -106,7 +110,7 @@ const PaymentSuccess = () => {
     const pdfHeight = (imgProps.height * contentWidth) / imgProps.width;
 
     pdf.addImage(data, "PNG", 10, 10, contentWidth, pdfHeight);
-    pdf.save("receipt.pdf");
+    pdf.save(`${skill.title}_receipt.pdf`);
   };
 
   if (loading || !skill) {
@@ -119,7 +123,7 @@ const PaymentSuccess = () => {
 
   return (
     <div className="min-h-screen bg-gray-50 py-12 px-4">
-      <PrintableReceipt ref={printableRef} skill={skill} />
+      <PrintableReceipt ref={printableRef} skill={skill} sessionId={sessionId} />
 
       <div className="max-w-2xl mx-auto bg-white shadow-lg rounded-xl overflow-hidden">
         <div
@@ -142,7 +146,7 @@ const PaymentSuccess = () => {
             </div>
             <div className="text-right">
               <p className="text-gray-500">Transaction ID:</p>
-              <p className="font-medium text-gray-800">#TXN12345ABC</p>
+              <p className="font-medium text-gray-800">{sessionId?.slice(0, 21)}</p>
               <p className="text-gray-500">Date:</p>
               <p className="font-medium text-gray-800">{new Date().toLocaleDateString()}</p>
             </div>
@@ -173,6 +177,7 @@ const PaymentSuccess = () => {
               <p>Total Paid</p>
               <p>₹{skill.price}</p>
             </div>
+            
             <div className="flex justify-end mt-1">
               <span className="text-xs px-2 py-1 rounded-full bg-green-100 text-green-700 font-medium">
                 ✅ Payment Success
@@ -182,12 +187,19 @@ const PaymentSuccess = () => {
         </div>
       </div>
 
-      <div className="flex justify-center mt-8">
+      <div className="flex justify-center mt-8 gap-4">
         <button
           onClick={downloadPDF}
           className="px-8 py-3 text-base rounded-xl bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white font-semibold shadow-lg hover:shadow-xl transition-transform transform hover:scale-105"
         >
           Download Receipt
+        </button>
+
+        <button
+          onClick={redirectSkillPage}
+          className="px-8 py-3 text-base rounded-xl bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white font-semibold shadow-lg hover:shadow-xl transition-transform transform hover:scale-105"
+        >
+          Go to Skill Page
         </button>
       </div>
     </div>

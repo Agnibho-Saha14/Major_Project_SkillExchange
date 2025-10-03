@@ -24,7 +24,7 @@ exports.createCheckoutSession = async (req, res) => {
           quantity: 1,
         },
       ],
-      success_url: `${process.env.CLIENT_URL}/payment-success?skillId=${skillId}`,
+      success_url: `${process.env.CLIENT_URL}/payment-success?skillId=${skillId}&sessionId={CHECKOUT_SESSION_ID}`,
       cancel_url: `${process.env.CLIENT_URL}/skills/${skillId}`,
     });
 

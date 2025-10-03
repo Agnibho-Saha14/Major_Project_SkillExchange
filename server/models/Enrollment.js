@@ -6,6 +6,7 @@ const enrollmentSchema = new mongoose.Schema(
     skillId: { type: mongoose.Schema.Types.ObjectId, ref: 'Skill', required: true },
     status: { type: String, enum: ['paid', 'exchange_pending', 'enrolled'], default: 'enrolled' },
     dateEnrolled: { type: Date, default: Date.now },
+    transactionId: { type: String },
   },
   { timestamps: true }
 );

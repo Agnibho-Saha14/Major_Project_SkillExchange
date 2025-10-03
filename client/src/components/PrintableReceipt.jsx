@@ -1,6 +1,6 @@
 import React from "react";
 
-const PrintableReceipt = React.forwardRef(({ skill }, ref) => {
+const PrintableReceipt = React.forwardRef(({ skill ,sessionId}, ref) => {
   if (!skill) return null;
 
   const styles = {
@@ -85,11 +85,16 @@ const PrintableReceipt = React.forwardRef(({ skill }, ref) => {
             <span>Date:</span>
             <span>{new Date().toLocaleDateString()}</span>
           </div>
+          <div style={styles.detailRow}>
+            <span>Transaction ID:</span>
+            <span>{sessionId?.slice(0, 21)}</span>
+           </div>
           <div style={styles.totalSection}>
             <div style={styles.totalRow}>
               <span>TOTAL PAID:</span>
               <span>₹{skill.price}</span>
             </div>
+            
             <div style={{ textAlign: 'right' }}>
               <span style={styles.status}>✓ PAYMENT SUCCESS</span>
             </div>
