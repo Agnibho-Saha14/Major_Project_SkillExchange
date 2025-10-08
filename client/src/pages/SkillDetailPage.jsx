@@ -428,7 +428,6 @@ export default function SkillDetailPage() {
       return;
     }
 
-    // Check if already enrolled
     if (isEnrolled) {
       alert('You are already enrolled in this course.');
       return;
@@ -447,7 +446,6 @@ export default function SkillDetailPage() {
   };
 
   const handleContact = () => {
-    // Check if user is authenticated
     if (!userLoaded || !user) {
       alert('Please sign in to contact the instructor.');
       return;
@@ -462,14 +460,6 @@ export default function SkillDetailPage() {
       },
     });
   }
-
-  const handleEnrollAction = () => {
-    if (skill.paymentOptions === 'exchange') {
-      handleProposeExchange();
-    } else {
-      handleCheckout();
-    }
-  };
 
   // Show loading while user data is being fetched
   if (!userLoaded || loading) {
@@ -503,7 +493,6 @@ export default function SkillDetailPage() {
     );
   }
 
-  // Main content
   return (
     <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-white to-purple-50">
       <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
@@ -675,7 +664,6 @@ export default function SkillDetailPage() {
           </div>
           
           <div className="lg:col-span-1">
-          {/* Sidebar */}
           <div className="sticky top-8 space-y-4">
             {/* Pricing Card */}
             <Card className="bg-white/80 backdrop-blur-sm border-0 shadow-xl">
@@ -711,20 +699,97 @@ export default function SkillDetailPage() {
                   </div>
                 ) : (
                   <>
-                    <Button
-                      onClick={handleEnrollAction}
-                      disabled={!user || enrollmentLoading}
-                      className="w-full bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white font-semibold py-3 text-lg shadow-lg hover:shadow-xl transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-                      size="lg"
-                    >
-                      {enrollmentLoading ? (
-                        <>
-                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                          Checking...
-                        </>
-                      ) : !user ? 'Sign In to Enroll' : 
-                       skill.paymentOptions === 'exchange' ? 'Propose Exchange' : 'Enroll Now'}
-                    </Button>
+                    {/* Show both buttons for 'both' payment option */}
+                    {skill.paymentOptions === 'both' ? (
+                      <div className="space-y-3">
+                        <Button
+                          onClick={handleCheckout}
+                          disabled={!user || enrollmentLoading}
+                          className="w-full bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white font-semibold py-3 text-lg shadow-lg hover:shadow-xl transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                          size="lg"
+                        >
+                          {enrollmentLoading ? (
+                            <>
+                              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                              Checking...
+                            </>
+                          ) : !user ? (
+                            'Sign In to Enroll'
+                          ) : (
+                            <>
+                              <IndianRupee className="h-5 w-5 mr-2" />
+                              Enroll Now (₹{skill.price})
+                            </>
+                          )}
+                        </Button>
+
+                        <div className="relative">
+                          <div className="absolute inset-0 flex items-center">
+                            <div className="w-full border-t border-gray-300"></div>
+                          </div>
+                          <div className="relative flex justify-center text-sm">
+                            <span className="px-2 bg-white text-gray-500">OR</span>
+                          </div>
+                        </div>
+
+                        <Button
+                          onClick={handleProposeExchange}
+                          disabled={!user || enrollmentLoading}
+                          className="w-full bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-semibold py-3 text-lg shadow-lg hover:shadow-xl transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                          size="lg"
+                        >
+                          {enrollmentLoading ? (
+                            <>
+                              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                              Checking...
+                            </>
+                          ) : !user ? (
+                            'Sign In to Exchange'
+                          ) : (
+                            <>
+                              <MessageSquare className="h-5 w-5 mr-2" />
+                              Propose Exchange
+                            </>
+                          )}
+                        </Button>
+                      </div>
+                    ) : skill.paymentOptions === 'exchange' ? (
+                      <Button
+                        onClick={handleProposeExchange}
+                        disabled={!user || enrollmentLoading}
+                        className="w-full bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white font-semibold py-3 text-lg shadow-lg hover:shadow-xl transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                        size="lg"
+                      >
+                        {enrollmentLoading ? (
+                          <>
+                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                            Checking...
+                          </>
+                        ) : !user ? (
+                          'Sign In to Exchange'
+                        ) : (
+                          'Propose Exchange'
+                        )}
+                      </Button>
+                    ) : (
+                      <Button
+                        onClick={handleCheckout}
+                        disabled={!user || enrollmentLoading}
+                        className="w-full bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white font-semibold py-3 text-lg shadow-lg hover:shadow-xl transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                        size="lg"
+                      >
+                        {enrollmentLoading ? (
+                          <>
+                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                            Checking...
+                          </>
+                        ) : !user ? (
+                          'Sign In to Enroll'
+                        ) : (
+                          'Enroll Now'
+                        )}
+                      </Button>
+                    )}
 
                     {!user && (
                       <p className="text-xs text-gray-500">
