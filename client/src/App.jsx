@@ -13,6 +13,8 @@ import ContactInstructor from "./pages/ContactInstructor"
 import ProtectedRoute from "./ProtectedRoute"
 import EditSkillPage from './pages/EditSkills'
 import PaymentSuccess from "./pages/PaymentSuccess"
+// ADDED: New Page Import
+import ProposeExchangePage from "./pages/ProposeExchangePage" 
 
 export default function App() {
   return (
@@ -20,17 +22,23 @@ export default function App() {
       <Routes>
         <Route path="/" element={<HomePage />} />
         <Route path="/browse" element={<BrowseSkillsPage />} />
-        <Route path="/publish" element={<PublishSkillPage />} />
-        <Route path="/dashboard" element={<DashboardPage />} />
-
+        
         <Route element={<ProtectedRoute/>}>
-        <Route path="/skills/:id" element={<SkillDetailPage />} />
+          <Route path="/publish" element={<PublishSkillPage />} />
+          <Route path="/dashboard" element={<DashboardPage />} />
+          <Route path="/skills/:id" element={<SkillDetailPage />} />
+          <Route path="/contact" element={<ContactInstructor/>}/>
+          <Route path="/skills/:id/edit" element={<EditSkillPage />} />
+          <Route path="/payment-success/" element={<PaymentSuccess/>}/>
+          
+          {/* ADDED: New Route Definition */}
+          <Route path="/propose-exchange" element={<ProposeExchangePage />} /> 
         </Route>
+
+        {/* Auth Routes - remain outside of ProtectedRoute to allow access */}
         <Route path="/login" element={<Login/>} />
         <Route path="/signup" element={<Signup/>} />
-        <Route path="/contact" element={<ContactInstructor/>}/>
-        <Route path="/skills/:id/edit" element={<EditSkillPage />} />
-        <Route path="/payment-success/" element={<PaymentSuccess/>}/>
+        
       </Routes>
       
     </Router>
