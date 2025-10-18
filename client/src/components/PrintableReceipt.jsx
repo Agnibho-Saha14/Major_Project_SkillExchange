@@ -87,7 +87,7 @@ const PrintableReceipt = React.forwardRef(({ skill ,sessionId}, ref) => {
           </div>
           <div style={styles.detailRow}>
             <span>Transaction ID:</span>
-            <span>{sessionId?.slice(0, 21)}</span>
+            <span>{sessionId?.slice(8, 21)}</span>
            </div>
           <div style={styles.totalSection}>
             <div style={styles.totalRow}>

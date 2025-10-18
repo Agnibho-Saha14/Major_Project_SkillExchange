@@ -42,7 +42,7 @@ export default function PostedSkills() {
           No skills posted yet
         </h3>
         <Link
-          to="/post-skill"
+          to="/publish"
           className="inline-flex items-center px-4 py-2 text-white bg-blue-600 hover:bg-blue-700 rounded-md"
         >
           Post Your First Skill

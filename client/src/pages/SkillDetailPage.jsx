@@ -418,31 +418,28 @@ export default function SkillDetailPage() {
   const handleProposeExchange = () => {
     // Prevent self-exchange
     if (isOwnSkill) {
-      alert('You cannot propose an exchange for your own skill.');
-      return;
-    }
+            alert('You cannot propose an exchange for your own skill.');
+            return;
+        }
+        if (!userLoaded || !user) {
+            alert('Please sign in to propose an exchange.');
+            return;
+        }
+        if (isEnrolled) {
+            alert('You are already enrolled in this course.');
+            return;
+        }
 
-    // Check if user is authenticated
-    if (!userLoaded || !user) {
-      alert('Please sign in to propose an exchange.');
-      return;
-    }
-
-    if (isEnrolled) {
-      alert('You are already enrolled in this course.');
-      return;
-    }
-
-    // Navigate to exchange proposal flow
-    navigate("/propose-exchange", {
-      state: {
-        skillId: skill._id,
-        instructorEmail: skill.email,
-        instructorName: skill.instructor,
-        courseTitle: skill.title,
-        wantedSkills: skill.skills
-      },
-    });
+        // Navigate to exchange proposal flow, passing necessary state
+        navigate("/propose-exchange", {
+            state: {
+                skillId: skill._id,
+                instructorEmail: skill.email,
+                instructorName: skill.instructor,
+                courseTitle: skill.title,
+                wantedSkills: skill.skills // Instructor's wanted skills
+            },
+        });
   };
 
   const handleContact = () => {

@@ -7,7 +7,8 @@ const skillRoutes = require('./routes/skillRoutes');
 const categoryRoutes = require('./routes/categoryRoutes');
 const healthRoutes = require('./routes/healthRoutes');
 const paymentRoutes = require('./routes/paymentRoutes');
-const enrollmentRoutes = require('./routes/enrollmentRoutes'); // ADDED: Import new enrollment routes
+const enrollmentRoutes = require('./routes/enrollmentRoutes');
+const exchangeRoutes = require('./routes/exchangeRoutes');  // ADDED: Import new enrollment routes
 
 const notFound = require('./middleware/notFound');
 const { errorHandler } = require('./middleware/errorHandler');
@@ -24,7 +25,8 @@ app.use('/api/skills', skillRoutes);
 app.use('/api/categories', categoryRoutes);
 app.use('/api/health', healthRoutes);
 app.use('/api/payments', paymentRoutes);
-app.use('/api/enrollments', enrollmentRoutes); // ADDED: Use new enrollment routes
+app.use('/api/enrollments', enrollmentRoutes);
+app.use('/api/exchange', exchangeRoutes); 
 
 app.use(notFound);
 app.use(errorHandler);

@@ -63,6 +63,8 @@ const PaymentSuccess = () => {
 
           // Send email only once and if user has a primary email
           if (!emailSentRef.current && user.primaryEmailAddress?.emailAddress) {
+
+            emailSentRef.current = true;
             const templateParams = {
               to_email: user.primaryEmailAddress.emailAddress,
               from_name: "SkillExchange",
@@ -80,7 +82,7 @@ const PaymentSuccess = () => {
             ).then(
               (res) => {
                 console.log("Enrollment email sent!", res.status, res.text);
-                emailSentRef.current = true;
+                
               },
               (err) => console.error("Failed to send email:", err)
             );
@@ -146,7 +148,7 @@ const PaymentSuccess = () => {
             </div>
             <div className="text-right">
               <p className="text-gray-500">Transaction ID:</p>
-              <p className="font-medium text-gray-800">{sessionId?.slice(0, 21)}</p>
+              <p className="font-medium text-gray-800">{sessionId?.slice(8, 21)}</p>
               <p className="text-gray-500">Date:</p>
               <p className="font-medium text-gray-800">{new Date().toLocaleDateString()}</p>
             </div>
