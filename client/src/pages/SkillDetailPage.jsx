@@ -107,22 +107,62 @@ function InteractiveStarRating({ rating, onRatingChange, size = "lg" }) {
 }
 
 /* ---------- RatingSection ---------- */
+/* ---------- RatingSection ---------- */
 function RatingSection({ skillId, averageRating, totalRatings, onRatingUpdate, isOwnSkill }) {
+  const { getToken } = useAuth();
+  const { user, isLoaded } = useUser();
   const [userRating, setUserRating] = useState(0);
   const [comment, setComment] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [hasRated, setHasRated] = useState(false);
-  const navigate = useNavigate();
+  const [checkingRating, setCheckingRating] = useState(true);
+  const [existingRating, setExistingRating] = useState(null);
+
+  // Check if user has already rated this skill
+  useEffect(() => {
+    const checkUserRating = async () => {
+      if (!isLoaded || !user || !skillId) {
+        setCheckingRating(false);
+        return;
+      }
+
+      try {
+        const token = await getToken();
+        const response = await fetch(`${API_BASE_URL}/skills/${skillId}/my-rating`, {
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        });
+
+        const result = await response.json();
+
+        if (result.success && result.data) {
+          setHasRated(result.data.hasRated);
+          if (result.data.rating) {
+            setExistingRating(result.data.rating);
+          }
+        }
+      } catch (error) {
+        console.error('Error checking user rating:', error);
+      } finally {
+        setCheckingRating(false);
+      }
+    };
+
+    checkUserRating();
+  }, [isLoaded, user, skillId, getToken]);
 
   const handleSubmitRating = async () => {
     if (userRating === 0) return;
 
     setIsSubmitting(true);
     try {
+      const token = await getToken();
       const response = await fetch(`${API_BASE_URL}/skills/${skillId}/rate`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
+          "Authorization": `Bearer ${token}`
         },
         body: JSON.stringify({
           rating: userRating,
@@ -134,14 +174,21 @@ function RatingSection({ skillId, averageRating, totalRatings, onRatingUpdate, i
 
       if (result.success) {
         setHasRated(true);
+        setExistingRating({
+          rating: userRating,
+          comment: comment.trim(),
+          createdAt: new Date()
+        });
         setUserRating(0);
         setComment("");
         onRatingUpdate(result.data);
-
-        // redirect after success
-        navigate("/");
       } else {
-        alert(result.message || "Failed to submit rating");
+        if (result.alreadyRated) {
+          setHasRated(true);
+          alert("You have already rated this skill.");
+        } else {
+          alert(result.message || "Failed to submit rating");
+        }
       }
     } catch (error) {
       console.error("Error submitting rating:", error);
@@ -175,51 +222,16 @@ function RatingSection({ skillId, averageRating, totalRatings, onRatingUpdate, i
           </div>
         </div>
 
-        {/* Rate This Skill */}
-        {!hasRated && !isOwnSkill && (
-          <div className="p-4 border-2 border-dashed border-indigo-200 rounded-xl">
-            <h3 className="text-lg font-semibold text-gray-900 mb-3">Rate This Skill</h3>
-
-            <div className="space-y-4">
-              <div>
-                <p className="text-sm text-gray-600 mb-2">Your Rating:</p>
-                <InteractiveStarRating
-                  rating={userRating}
-                  onRatingChange={setUserRating}
-                />
-              </div>
-
-              <div>
-                <p className="text-sm text-gray-600 mb-2">Comment (optional):</p>
-                <Textarea
-                  value={comment}
-                  onChange={(e) => setComment(e.target.value)}
-                  placeholder="Share your experience with this skill..."
-                  rows={3}
-                  className="resize-none rounded-xl border-2 border-gray-200 focus:border-indigo-500"
-                />
-              </div>
-
-              <Button
-                onClick={handleSubmitRating}
-                disabled={userRating === 0 || isSubmitting}
-                className="w-full bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 disabled:opacity-50"
-              >
-                {isSubmitting ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Submitting...
-                  </>
-                ) : (
-                  'Submit Rating'
-                )}
-              </Button>
-            </div>
+        {/* Loading state while checking */}
+        {checkingRating && (
+          <div className="flex items-center justify-center p-4">
+            <Loader2 className="h-5 w-5 animate-spin text-indigo-600 mr-2" />
+            <span className="text-gray-600">Checking rating status...</span>
           </div>
         )}
 
         {/* Owner Message */}
-        {isOwnSkill && (
+        {!checkingRating && isOwnSkill && (
           <div className="p-4 bg-blue-50 border border-blue-200 rounded-xl">
             <div className="flex items-center text-blue-800">
               <Shield className="h-5 w-5 mr-2" />
@@ -228,13 +240,86 @@ function RatingSection({ skillId, averageRating, totalRatings, onRatingUpdate, i
           </div>
         )}
 
-        {/* Thank You Message */}
-        {hasRated && (
-          <div className="p-4 bg-green-50 border border-green-200 rounded-xl">
+        {/* Already Rated Message */}
+        {!checkingRating && hasRated && !isOwnSkill && existingRating && (
+          <div className="p-4 bg-green-50 border border-green-200 rounded-xl space-y-3">
             <div className="flex items-center text-green-800">
               <CheckCircle className="h-5 w-5 mr-2" />
-              <span className="font-medium">Thank you for your rating!</span>
+              <span className="font-medium">You have already rated this skill</span>
             </div>
+            <div className="pl-7">
+              <div className="flex items-center mb-2">
+                <span className="text-sm text-gray-700 mr-2">Your rating:</span>
+                <StarRating rating={existingRating.rating} size="sm" showNumber={false} />
+                <span className="ml-2 font-semibold text-gray-900">{existingRating.rating}/5</span>
+              </div>
+              {existingRating.comment && (
+                <div className="text-sm text-gray-700">
+                  <span className="font-medium">Your comment:</span>
+                  <p className="mt-1 italic">"{existingRating.comment}"</p>
+                </div>
+              )}
+              <p className="text-xs text-gray-500 mt-2">
+                Submitted on {new Date(existingRating.createdAt).toLocaleDateString()}
+              </p>
+            </div>
+          </div>
+        )}
+
+        {/* Rate This Skill - Only if not rated and not owner */}
+        {!checkingRating && !hasRated && !isOwnSkill && (
+          <div className="p-4 border-2 border-dashed border-indigo-200 rounded-xl">
+            {!user ? (
+              <div className="text-center p-4">
+                <p className="text-gray-600 mb-3">Sign in to rate this skill</p>
+                <Button
+                  onClick={() => window.location.href = '/sign-in'}
+                  className="bg-indigo-600 hover:bg-indigo-700"
+                >
+                  Sign In
+                </Button>
+              </div>
+            ) : (
+              <>
+                <h3 className="text-lg font-semibold text-gray-900 mb-3">Rate This Skill</h3>
+
+                <div className="space-y-4">
+                  <div>
+                    <p className="text-sm text-gray-600 mb-2">Your Rating:</p>
+                    <InteractiveStarRating
+                      rating={userRating}
+                      onRatingChange={setUserRating}
+                    />
+                  </div>
+
+                  <div>
+                    <p className="text-sm text-gray-600 mb-2">Comment (optional):</p>
+                    <Textarea
+                      value={comment}
+                      onChange={(e) => setComment(e.target.value)}
+                      placeholder="Share your experience with this skill..."
+                      rows={3}
+                      className="resize-none rounded-xl border-2 border-gray-200 focus:border-indigo-500"
+                    />
+                  </div>
+
+                  <Button
+                    onClick={handleSubmitRating}
+                    disabled={userRating === 0 || isSubmitting}
+                    className="w-full bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 disabled:opacity-50"
+                  >
+                    {isSubmitting ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        Submitting...
+                      </>
+                    ) : (
+                      'Submit Rating'
+                    )}
+                  </Button>
+                </div>
+              </>
+            )}
           </div>
         )}
       </CardContent>

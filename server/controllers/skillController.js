@@ -233,18 +233,43 @@ exports.addRating = asyncHandler(async (req, res) => {
     return res.status(400).json({ success: false, message: 'Rating must be between 1 and 5' });
   }
 
+  const { userId } = getAuth(req);
+  
+  // Require authentication for rating
+  if (!userId) {
+    return res.status(401).json({ success: false, message: 'You must be signed in to rate a skill' });
+  }
+
   const item = await Skill.findById(req.params.id);
   if (!item) {
     res.status(404);
     throw new Error('Skill not found');
   }
 
-  const { userId } = getAuth(req);
+  // Prevent owner from rating their own skill
+  if (String(item.ownerId) === String(userId)) {
+    return res.status(403).json({ 
+      success: false, 
+      message: 'You cannot rate your own skill' 
+    });
+  }
 
+  // Check if user has already rated this skill
+  const existingRating = item.ratings.find(r => String(r.userId) === String(userId));
+  
+  if (existingRating) {
+    return res.status(400).json({ 
+      success: false, 
+      message: 'You have already rated this skill',
+      alreadyRated: true
+    });
+  }
+
+  // Add the new rating
   item.ratings.push({
     rating: rNum,
     comment: comment.trim(),
-    userId: userId || 'anonymous',
+    userId: String(userId),
     createdAt: new Date()
   });
 
@@ -253,6 +278,7 @@ exports.addRating = asyncHandler(async (req, res) => {
 
   res.json({
     success: true,
+    message: 'Rating submitted successfully',
     data: {
       _id: item._id,
       averageRating: item.averageRating,
@@ -262,6 +288,38 @@ exports.addRating = asyncHandler(async (req, res) => {
   });
 });
 
+// GET user's rating for a specific skill (NEW ENDPOINT)
+exports.getUserRating = asyncHandler(async (req, res) => {
+  const { userId } = getAuth(req);
+  
+  if (!userId) {
+    return res.json({ 
+      success: true, 
+      data: { hasRated: false, rating: null } 
+    });
+  }
+
+  const item = await Skill.findById(req.params.id).select('ratings ownerId');
+  if (!item) {
+    res.status(404);
+    throw new Error('Skill not found');
+  }
+
+  // Check if user is the owner
+  const isOwner = String(item.ownerId) === String(userId);
+
+  // Find user's rating
+  const userRating = item.ratings.find(r => String(r.userId) === String(userId));
+
+  res.json({
+    success: true,
+    data: {
+      hasRated: !!userRating,
+      isOwner: isOwner,
+      rating: userRating || null
+    }
+  });
+});
 // GET ratings
 exports.getRatings = asyncHandler(async (req, res) => {
   const item = await Skill.findById(req.params.id).select('ratings averageRating totalRatings');

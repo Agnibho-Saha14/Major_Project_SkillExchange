@@ -38,7 +38,15 @@ const skillSchema = new mongoose.Schema(
     learningOutcomes: { type: String, default: '' },
     teachingFormat: { type: teachingFormatSchema, default: () => ({}) },
     status: { type: String, enum: ['draft', 'published', 'inactive'], default: 'draft' },
-    ratings: { type: [ratingSchema], default: [] },
+    // In your Skill model file
+ratings: [
+  {
+    rating: { type: Number, required: true, min: 1, max: 5 },
+    comment: { type: String, default: '' },
+    userId: { type: String, required: true }, // Make this required
+    createdAt: { type: Date, default: Date.now }
+  }
+],
     averageRating: { type: Number, default: 0, min: 0, max: 5 },
     totalRatings: { type: Number, default: 0, min: 0 },
     email: { type: String, required: false, default: '' } // not strictly required so create won't fail

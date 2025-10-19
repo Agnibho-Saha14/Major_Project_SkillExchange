@@ -11,6 +11,7 @@ const {
   getRatings,
   getMySkills,
   getSkillForEdit,
+  getUserRating,
 } = require('../controllers/skillController');
 
 const router = express.Router();
@@ -35,6 +36,7 @@ router.patch('/:id/publish', publishSkill);
 router.get('/:id', getSkillById);
 router.put('/:id', updateSkill);
 router.delete('/:id', deleteSkill);
-router.get('/:id/edit', getSkillForEdit)
+router.get('/:id/edit', getSkillForEdit);
+router.get('/skills/:id/my-rating', getUserRating);
 
 module.exports = router;
