@@ -82,7 +82,7 @@ function InteractiveStarRating({ rating, onRatingChange, size = "lg" }) {
   const handleMouseLeave = () => {
     setHoverRating(0);
   };
-  
+
   return (
     <div className="flex items-center space-x-1">
       {[1, 2, 3, 4, 5].map((value) => (
@@ -96,8 +96,8 @@ function InteractiveStarRating({ rating, onRatingChange, size = "lg" }) {
         >
           <Star
             className={`${size === "lg" ? "h-8 w-8" : "h-6 w-6"} cursor-pointer ${value <= (hoverRating || rating)
-                ? "fill-yellow-400 text-yellow-400"
-                : "text-gray-300 hover:text-yellow-300"
+              ? "fill-yellow-400 text-yellow-400"
+              : "text-gray-300 hover:text-yellow-300"
               }`}
           />
         </button>
@@ -333,7 +333,7 @@ export default function SkillDetailPage() {
   const { getToken } = useAuth();
   const navigate = useNavigate();
   const [skillId, setSkillId] = useState('');
-  
+
   useEffect(() => {
     const parts = window.location.pathname.split('/');
     const id = parts.pop() || parts.pop(); // handle trailing slash
@@ -347,9 +347,9 @@ export default function SkillDetailPage() {
   const [enrollmentLoading, setEnrollmentLoading] = useState(false);
 
   // Check if current user is the skill owner
-  const isOwnSkill = userLoaded && user && skill && 
-    (user.emailAddresses[0]?.emailAddress === skill.email || 
-     user.emailAddresses.some(email => email.emailAddress === skill.email));
+  const isOwnSkill = userLoaded && user && skill &&
+    (user.emailAddresses[0]?.emailAddress === skill.email ||
+      user.emailAddresses.some(email => email.emailAddress === skill.email));
 
   const fetchSkillDetails = async () => {
     setLoading(true);
@@ -387,9 +387,9 @@ export default function SkillDetailPage() {
           'Authorization': `Bearer ${token}`
         }
       });
-      
+
       const result = await response.json();
-      
+
       if (response.ok && result.success) {
         setIsEnrolled(result.data.isEnrolled);
       } else {
@@ -480,10 +480,10 @@ export default function SkillDetailPage() {
       const res = await fetch(`${API_BASE_URL}/payments/checkout`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ 
-          skillId: skill._id, 
+        body: JSON.stringify({
+          skillId: skill._id,
           price: skill.price,
-          userEmail: user.emailAddresses[0]?.emailAddress 
+          userEmail: user.emailAddresses[0]?.emailAddress
         }),
       });
 
@@ -503,28 +503,28 @@ export default function SkillDetailPage() {
   const handleProposeExchange = () => {
     // Prevent self-exchange
     if (isOwnSkill) {
-            alert('You cannot propose an exchange for your own skill.');
-            return;
-        }
-        if (!userLoaded || !user) {
-            alert('Please sign in to propose an exchange.');
-            return;
-        }
-        if (isEnrolled) {
-            alert('You are already enrolled in this course.');
-            return;
-        }
+      alert('You cannot propose an exchange for your own skill.');
+      return;
+    }
+    if (!userLoaded || !user) {
+      alert('Please sign in to propose an exchange.');
+      return;
+    }
+    if (isEnrolled) {
+      alert('You are already enrolled in this course.');
+      return;
+    }
 
-        // Navigate to exchange proposal flow, passing necessary state
-        navigate("/propose-exchange", {
-            state: {
-                skillId: skill._id,
-                instructorEmail: skill.email,
-                instructorName: skill.instructor,
-                courseTitle: skill.title,
-                wantedSkills: skill.skills // Instructor's wanted skills
-            },
-        });
+    // Navigate to exchange proposal flow, passing necessary state
+    navigate("/propose-exchange", {
+      state: {
+        skillId: skill._id,
+        instructorEmail: skill.email,
+        instructorName: skill.instructor,
+        courseTitle: skill.title,
+        wantedSkills: skill.skills // Instructor's wanted skills
+      },
+    });
   };
 
   const handleContact = () => {
@@ -538,7 +538,7 @@ export default function SkillDetailPage() {
         instructorEmail: skill.email,
         instructorName: skill.instructor,
         courseTitle: skill.title,
-        skillId: skill._id   
+        skillId: skill._id
       },
     });
   }
@@ -580,13 +580,13 @@ export default function SkillDetailPage() {
       <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Back Button */}
         <Link to="/">
-        <Button
-          variant="outline"
-          className="mb-6 hover:bg-indigo-50"
-        >
-          <ArrowLeft className="h-4 w-4 mr-2" />
-          Back to Skills
-        </Button>
+          <Button
+            variant="outline"
+            className="mb-6 hover:bg-indigo-50"
+          >
+            <ArrowLeft className="h-4 w-4 mr-2" />
+            Back to Skills
+          </Button>
         </Link>
 
         <div className="grid lg:grid-cols-3 gap-8">
@@ -744,80 +744,104 @@ export default function SkillDetailPage() {
               isOwnSkill={isOwnSkill}
             />
           </div>
-          
+
           <div className="lg:col-span-1">
-          <div className="sticky top-8 space-y-4">
-            {/* Pricing Card */}
-            <Card className="bg-white/80 backdrop-blur-sm border-0 shadow-xl">
-              <CardHeader className="text-center">
-                <CardTitle className="text-2xl font-bold text-gray-900">
-                  {isOwnSkill ? 'Your Skill' : isEnrolled ? 'Already Enrolled' : 'Get Started'}
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="text-center space-y-4">
-                <div className="p-4 bg-gradient-to-r from-green-50 to-blue-50 rounded-xl">
-                  {formatPrice(skill.price, skill.paymentOptions)}
-                </div>
-
-                {isOwnSkill ? (
-                  <div className="p-4 bg-blue-50 border border-blue-200 rounded-xl">
-                    <div className="flex items-center justify-center text-blue-800 mb-2">
-                      <Shield className="h-5 w-5 mr-2" />
-                      <span className="font-medium">This is your skill</span>
-                    </div>
-                    <p className="text-sm text-blue-700">
-                      You cannot enroll in your own course. Share this link with others to get enrollments!
-                    </p>
+            <div className="sticky top-8 space-y-4">
+              {/* Pricing Card */}
+              <Card className="bg-white/80 backdrop-blur-sm border-0 shadow-xl">
+                <CardHeader className="text-center">
+                  <CardTitle className="text-2xl font-bold text-gray-900">
+                    {isOwnSkill ? 'Your Skill' : isEnrolled ? 'Already Enrolled' : 'Get Started'}
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="text-center space-y-4">
+                  <div className="p-4 bg-gradient-to-r from-green-50 to-blue-50 rounded-xl">
+                    {formatPrice(skill.price, skill.paymentOptions)}
                   </div>
-                ) : isEnrolled ? (
-                  <div className="p-4 bg-green-50 border border-green-200 rounded-xl">
-                    <div className="flex items-center justify-center text-green-800 mb-2">
-                      <CheckCircle className="h-5 w-5 mr-2" />
-                      <span className="font-medium">You're enrolled!</span>
-                    </div>
-                    <p className="text-sm text-green-700">
-                      You have access to this skill. Contact the instructor to coordinate learning sessions.
-                    </p>
-                  </div>
-                ) : (
-                  <>
-                    {/* Show both buttons for 'both' payment option */}
-                    {skill.paymentOptions === 'both' ? (
-                      <div className="space-y-3">
-                        <Button
-                          onClick={handleCheckout}
-                          disabled={!user || enrollmentLoading}
-                          className="w-full bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white font-semibold py-3 text-lg shadow-lg hover:shadow-xl transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-                          size="lg"
-                        >
-                          {enrollmentLoading ? (
-                            <>
-                              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                              Checking...
-                            </>
-                          ) : !user ? (
-                            'Sign In to Enroll'
-                          ) : (
-                            <>
-                              <IndianRupee className="h-5 w-5 mr-2" />
-                              Enroll Now (₹{skill.price})
-                            </>
-                          )}
-                        </Button>
 
-                        <div className="relative">
-                          <div className="absolute inset-0 flex items-center">
-                            <div className="w-full border-t border-gray-300"></div>
+                  {isOwnSkill ? (
+                    <div className="p-4 bg-blue-50 border border-blue-200 rounded-xl">
+                      <div className="flex items-center justify-center text-blue-800 mb-2">
+                        <Shield className="h-5 w-5 mr-2" />
+                        <span className="font-medium">This is your skill</span>
+                      </div>
+                      <p className="text-sm text-blue-700">
+                        You cannot enroll in your own course. Share this link with others to get enrollments!
+                      </p>
+                    </div>
+                  ) : isEnrolled ? (
+                    <div className="p-4 bg-green-50 border border-green-200 rounded-xl">
+                      <div className="flex items-center justify-center text-green-800 mb-2">
+                        <CheckCircle className="h-5 w-5 mr-2" />
+                        <span className="font-medium">You're enrolled!</span>
+                      </div>
+                      <p className="text-sm text-green-700">
+                        You have access to this skill. Contact the instructor to coordinate learning sessions.
+                      </p>
+                    </div>
+                  ) : (
+                    <>
+                      {/* Show both buttons for 'both' payment option */}
+                      {skill.paymentOptions === 'both' ? (
+                        <div className="space-y-3">
+                          <Button
+                            onClick={handleCheckout}
+                            disabled={!user || enrollmentLoading}
+                            className="w-full bg-gradient-to-r cursor-pointer from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white font-semibold py-3 text-lg shadow-lg hover:shadow-xl transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                            size="lg"
+                          >
+                            {enrollmentLoading ? (
+                              <>
+                                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                Checking...
+                              </>
+                            ) : !user ? (
+                              'Sign In to Enroll'
+                            ) : (
+                              <>
+                                <IndianRupee className="h-5 w-5 mr-2" />
+                                Enroll Now (₹{skill.price})
+                              </>
+                            )}
+                          </Button>
+
+                          <div className="relative">
+                            <div className="absolute inset-0 flex items-center">
+                              <div className="w-full border-t border-gray-300"></div>
+                            </div>
+                            <div className="relative flex justify-center text-sm">
+                              <span className="px-2 bg-white text-gray-500">OR</span>
+                            </div>
                           </div>
-                          <div className="relative flex justify-center text-sm">
-                            <span className="px-2 bg-white text-gray-500">OR</span>
-                          </div>
+
+                          <Button
+                            onClick={handleProposeExchange}
+                            disabled={!user || enrollmentLoading}
+                            className="w-full bg-gradient-to-r cursor-pointer
+ from-blue-600 to-indigo-600 hover:from-blue-700
+  hover:to-indigo-700 text-white font-semibold py-3 text-lg shadow-lg hover:shadow-xl transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                            size="lg"
+                          >
+                            {enrollmentLoading ? (
+                              <>
+                                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                Checking...
+                              </>
+                            ) : !user ? (
+                              'Sign In to Exchange'
+                            ) : (
+                              <>
+                                <MessageSquare className="h-5 w-5 mr-2" />
+                                Propose Exchange
+                              </>
+                            )}
+                          </Button>
                         </div>
-
+                      ) : skill.paymentOptions === 'exchange' ? (
                         <Button
                           onClick={handleProposeExchange}
                           disabled={!user || enrollmentLoading}
-                          className="w-full bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-semibold py-3 text-lg shadow-lg hover:shadow-xl transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                          className="w-full bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white font-semibold py-3 text-lg shadow-lg hover:shadow-xl transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                           size="lg"
                         >
                           {enrollmentLoading ? (
@@ -828,112 +852,90 @@ export default function SkillDetailPage() {
                           ) : !user ? (
                             'Sign In to Exchange'
                           ) : (
-                            <>
-                              <MessageSquare className="h-5 w-5 mr-2" />
-                              Propose Exchange
-                            </>
+                            'Propose Exchange'
                           )}
                         </Button>
-                      </div>
-                    ) : skill.paymentOptions === 'exchange' ? (
-                      <Button
-                        onClick={handleProposeExchange}
-                        disabled={!user || enrollmentLoading}
-                        className="w-full bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white font-semibold py-3 text-lg shadow-lg hover:shadow-xl transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-                        size="lg"
-                      >
-                        {enrollmentLoading ? (
-                          <>
-                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                            Checking...
-                          </>
-                        ) : !user ? (
-                          'Sign In to Exchange'
-                        ) : (
-                          'Propose Exchange'
-                        )}
-                      </Button>
-                    ) : (
-                      <Button
-                        onClick={handleCheckout}
-                        disabled={!user || enrollmentLoading}
-                        className="w-full bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white font-semibold py-3 text-lg shadow-lg hover:shadow-xl transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-                        size="lg"
-                      >
-                        {enrollmentLoading ? (
-                          <>
-                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                            Checking...
-                          </>
-                        ) : !user ? (
-                          'Sign In to Enroll'
-                        ) : (
-                          'Enroll Now'
-                        )}
-                      </Button>
-                    )}
+                      ) : (
+                        <Button
+                          onClick={handleCheckout}
+                          disabled={!user || enrollmentLoading}
+                          className="w-full bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white font-semibold py-3 text-lg shadow-lg hover:shadow-xl transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                          size="lg"
+                        >
+                          {enrollmentLoading ? (
+                            <>
+                              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                              Checking...
+                            </>
+                          ) : !user ? (
+                            'Sign In to Enroll'
+                          ) : (
+                            'Enroll Now'
+                          )}
+                        </Button>
+                      )}
 
-                    {!user && (
-                      <p className="text-xs text-gray-500">
-                        Please sign in to enroll in this course
-                      </p>
-                    )}
-                  </>
-                )}
+                      {!user && (
+                        <p className="text-xs text-gray-500">
+                          Please sign in to enroll in this course
+                        </p>
+                      )}
+                    </>
+                  )}
 
-                {!isOwnSkill && !isEnrolled && (
-                  <div className="text-sm text-gray-600 space-y-2">
-                    <p>✅ Direct access to instructor</p>
-                    <p>✅ Flexible learning schedule</p>
-                    <p>✅ Certificate of completion</p>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-
-            {/* Instructor Card */}
-            <Card className="bg-white/80 backdrop-blur-sm border-0 shadow-lg">
-              <CardHeader>
-                <CardTitle className="flex items-center text-lg">
-                  <User className="h-5 w-5 mr-2 text-indigo-600" />
-                  About the Instructor
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="text-center mb-4">
-                  <div className="w-16 h-16 bg-gradient-to-r from-indigo-600 to-purple-600 rounded-full mx-auto mb-3 flex items-center justify-center">
-                    <User className="h-8 w-8 text-white" />
-                  </div>
-                  <h3 className="font-bold text-lg text-gray-900">{skill.instructor}</h3>
-                  <p className="text-gray-600 text-sm">Skill Expert</p>
-
-                  {/* Display instructor email in sidebar */}
-                  {skill.email && (
-                    <div className="flex items-center justify-center mt-2 text-gray-600">
-                      <Mail className="h-4 w-4 mr-2" />
-                      <span className="text-sm">{skill.email}</span>
+                  {!isOwnSkill && !isEnrolled && (
+                    <div className="text-sm text-gray-600 space-y-2">
+                      <p>✅ Direct access to instructor</p>
+                      <p>✅ Flexible learning schedule</p>
+                      <p>✅ Certificate of completion</p>
                     </div>
                   )}
-                </div>
+                </CardContent>
+              </Card>
 
-                {isOwnSkill ? (
-                  <div className="text-center text-sm text-gray-600">
-                    This is your profile
+              {/* Instructor Card */}
+              <Card className="bg-white/80 backdrop-blur-sm border-0 shadow-lg">
+                <CardHeader>
+                  <CardTitle className="flex items-center text-lg">
+                    <User className="h-5 w-5 mr-2 text-indigo-600" />
+                    About the Instructor
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="text-center mb-4">
+                    <div className="w-16 h-16 bg-gradient-to-r from-indigo-600 to-purple-600 rounded-full mx-auto mb-3 flex items-center justify-center">
+                      <User className="h-8 w-8 text-white" />
+                    </div>
+                    <h3 className="font-bold text-lg text-gray-900">{skill.instructor}</h3>
+                    <p className="text-gray-600 text-sm">Skill Expert</p>
+
+                    {/* Display instructor email in sidebar */}
+                    {skill.email && (
+                      <div className="flex items-center justify-center mt-2 text-gray-600">
+                        <Mail className="h-4 w-4 mr-2" />
+                        <span className="text-sm">{skill.email}</span>
+                      </div>
+                    )}
                   </div>
-                ) : (
-                  <Button 
-                    variant="outline" 
-                    className="w-full" 
-                    onClick={handleContact}
-                    disabled={!user}
-                  >
-                    {!user ? 'Sign In to Contact' : 'Contact Instructor for Queries'}
-                  </Button>
-                )}
-              </CardContent>
-            </Card>
+
+                  {isOwnSkill ? (
+                    <div className="text-center text-sm text-gray-600">
+                      This is your profile
+                    </div>
+                  ) : (
+                    <Button
+                      variant="outline"
+                      className="w-full cursor-pointer hover:bg-gray-100"
+                      onClick={handleContact}
+                      disabled={!user}
+                    >
+                      {!user ? 'Sign In to Contact' : 'Contact Instructor for Queries'}
+                    </Button>
+                  )}
+                </CardContent>
+              </Card>
+            </div>
           </div>
-         </div>
         </div>
       </div>
     </div>
