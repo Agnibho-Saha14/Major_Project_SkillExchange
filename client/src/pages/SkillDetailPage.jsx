@@ -22,11 +22,11 @@ import {
   Mail,
   Shield
 } from "lucide-react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom"; // NOTE: Assumes you handle useParams or similar for ID extraction
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
 
-/* ---------- StarRating ---------- */
+/* ---------- StarRating (No Change) ---------- */
 function StarRating({ rating = 0, size = "md", showNumber = true }) {
   const stars = [];
   const fullStars = Math.floor(rating);
@@ -67,7 +67,7 @@ function StarRating({ rating = 0, size = "md", showNumber = true }) {
   );
 }
 
-/* ---------- InteractiveStarRating ---------- */
+/* ---------- InteractiveStarRating (MODIFIED for 'sm' size) ---------- */
 function InteractiveStarRating({ rating, onRatingChange, size = "lg" }) {
   const [hoverRating, setHoverRating] = useState(0);
 
@@ -83,6 +83,9 @@ function InteractiveStarRating({ rating, onRatingChange, size = "lg" }) {
     setHoverRating(0);
   };
 
+  // Determine star size based on 'size' prop
+  const starSizeClass = size === "sm" ? "h-5 w-5" : size === "lg" ? "h-8 w-8" : "h-6 w-6";
+
   return (
     <div className="flex items-center space-x-1">
       {[1, 2, 3, 4, 5].map((value) => (
@@ -95,7 +98,7 @@ function InteractiveStarRating({ rating, onRatingChange, size = "lg" }) {
           className="focus:outline-none transition-colors hover:scale-110 transform"
         >
           <Star
-            className={`${size === "lg" ? "h-8 w-8" : "h-6 w-6"} cursor-pointer ${value <= (hoverRating || rating)
+            className={`${starSizeClass} cursor-pointer ${value <= (hoverRating || rating)
               ? "fill-yellow-400 text-yellow-400"
               : "text-gray-300 hover:text-yellow-300"
               }`}
@@ -106,22 +109,43 @@ function InteractiveStarRating({ rating, onRatingChange, size = "lg" }) {
   );
 }
 
-/* ---------- RatingSection ---------- */
-/* ---------- RatingSection ---------- */
-function RatingSection({ skillId, averageRating, totalRatings, onRatingUpdate, isOwnSkill }) {
+/* ---------- RatingSection (REPLACED with 10-parameter logic and isEnrolled check) ---------- */
+function RatingSection({ skillId, averageRating, totalRatings, onRatingUpdate, isOwnSkill, isEnrolled }) {
   const { getToken } = useAuth();
   const { user, isLoaded } = useUser();
-  const [userRating, setUserRating] = useState(0);
-  const [comment, setComment] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [hasRated, setHasRated] = useState(false);
   const [checkingRating, setCheckingRating] = useState(true);
   const [existingRating, setExistingRating] = useState(null);
 
-  // Check if user has already rated this skill
+  // 1. Define the 10 parameters
+  const RATING_PARAMETERS = [
+    "Course Content Quality", // 1
+    "Instructor Expertise",   // 2
+    "Clarity of Explanation", // 3
+    "Practical Examples",     // 4
+    "Course Duration",        // 5
+    "Simplicity and Pace",    // 6
+    "Engagement/Interactivity", // 7
+    "Materials Provided",     // 8
+    "Value for Money",        // 9
+    "Overall Learning Experience", // 10
+  ];
+  
+  // Initialize parameter ratings state (all start at 0)
+  const initialParameterRatings = RATING_PARAMETERS.reduce((acc, param) => {
+    acc[param] = 0;
+    return acc;
+  }, {});
+
+  const [parameterRatings, setParameterRatings] = useState(initialParameterRatings);
+  const [userComment, setUserComment] = useState("");
+
+  // Check if user has already rated this skill (existing logic)
   useEffect(() => {
     const checkUserRating = async () => {
-      if (!isLoaded || !user || !skillId) {
+      // Only check rating status if user is logged in AND enrollment status is resolved AND user is enrolled
+      if (!isLoaded || !user || !skillId || !isEnrolled) {
         setCheckingRating(false);
         return;
       }
@@ -149,12 +173,51 @@ function RatingSection({ skillId, averageRating, totalRatings, onRatingUpdate, i
       }
     };
 
-    checkUserRating();
-  }, [isLoaded, user, skillId, getToken]);
+    // Only run check if enrolled to avoid unnecessary API calls and ensure correctness
+    if (isEnrolled) {
+        checkUserRating();
+    } else {
+        setCheckingRating(false);
+    }
+  }, [isLoaded, user, skillId, getToken, isEnrolled]); // Added isEnrolled as dependency
+  
+  // Handler for parameter rating changes
+  const handleParameterRatingChange = (param, value) => {
+    setParameterRatings(prev => ({ ...prev, [param]: value }));
+  };
+  
+  // Calculation for average rating
+  const calculateAverageRating = () => {
+    const ratingsArray = Object.values(parameterRatings);
+    
+    const ratedArray = ratingsArray.filter(r => r > 0);
+    if (ratedArray.length === 0) return 0;
+    
+    const sum = ratedArray.reduce((acc, r) => acc + r, 0);
+    return Math.round((sum / ratedArray.length) * 10) / 10; 
+  };
+  
+  // Function to format the parameter ratings for the backend comment field
+  const formatParameterRatings = (avg) => {
+      const breakdown = RATING_PARAMETERS.map(param => 
+        `${param}: ${parameterRatings[param]}/5`
+      ).join('\n');
+      return `Average Rating: ${avg.toFixed(1)}/5\nDetailed Rating Breakdown:\n${breakdown}\n\nUser Comment:\n${userComment.trim()}`;
+  };
+
+  const currentAverage = calculateAverageRating();
+  const allRated = Object.values(parameterRatings).length === RATING_PARAMETERS.length && 
+                   Object.values(parameterRatings).every(r => r > 0);
+
 
   const handleSubmitRating = async () => {
-    if (userRating === 0) return;
+    if (!allRated) {
+        alert("Please rate all 10 parameters before submitting.");
+        return;
+    }
 
+    const avgRating = calculateAverageRating();
+    
     setIsSubmitting(true);
     try {
       const token = await getToken();
@@ -165,8 +228,8 @@ function RatingSection({ skillId, averageRating, totalRatings, onRatingUpdate, i
           "Authorization": `Bearer ${token}`
         },
         body: JSON.stringify({
-          rating: userRating,
-          comment: comment.trim(),
+          rating: avgRating, // Send the calculated average rating
+          comment: formatParameterRatings(avgRating), // Send the detailed breakdown in the comment field
         }),
       });
 
@@ -175,13 +238,13 @@ function RatingSection({ skillId, averageRating, totalRatings, onRatingUpdate, i
       if (result.success) {
         setHasRated(true);
         setExistingRating({
-          rating: userRating,
-          comment: comment.trim(),
+          rating: avgRating,
+          comment: userComment.trim(),
           createdAt: new Date()
         });
-        setUserRating(0);
-        setComment("");
-        onRatingUpdate(result.data);
+        setParameterRatings(initialParameterRatings);
+        setUserComment("");
+        onRatingUpdate(result.data); // Update the parent component's total/avg rating
       } else {
         if (result.alreadyRated) {
           setHasRated(true);
@@ -223,13 +286,13 @@ function RatingSection({ skillId, averageRating, totalRatings, onRatingUpdate, i
         </div>
 
         {/* Loading state while checking */}
-        {checkingRating && (
+        {checkingRating && (isEnrolled || hasRated) && (
           <div className="flex items-center justify-center p-4">
             <Loader2 className="h-5 w-5 animate-spin text-indigo-600 mr-2" />
             <span className="text-gray-600">Checking rating status...</span>
           </div>
         )}
-
+        
         {/* Owner Message */}
         {!checkingRating && isOwnSkill && (
           <div className="p-4 bg-blue-50 border border-blue-200 rounded-xl">
@@ -249,14 +312,14 @@ function RatingSection({ skillId, averageRating, totalRatings, onRatingUpdate, i
             </div>
             <div className="pl-7">
               <div className="flex items-center mb-2">
-                <span className="text-sm text-gray-700 mr-2">Your rating:</span>
+                <span className="text-sm text-gray-700 mr-2">Your average rating:</span>
                 <StarRating rating={existingRating.rating} size="sm" showNumber={false} />
-                <span className="ml-2 font-semibold text-gray-900">{existingRating.rating}/5</span>
+                <span className="ml-2 font-semibold text-gray-900">{existingRating.rating.toFixed(1)}/5</span>
               </div>
               {existingRating.comment && (
                 <div className="text-sm text-gray-700">
                   <span className="font-medium">Your comment:</span>
-                  <p className="mt-1 italic">"{existingRating.comment}"</p>
+                  <p className="mt-1 italic whitespace-pre-wrap text-xs md:text-sm">{existingRating.comment}</p> 
                 </div>
               )}
               <p className="text-xs text-gray-500 mt-2">
@@ -266,68 +329,114 @@ function RatingSection({ skillId, averageRating, totalRatings, onRatingUpdate, i
           </div>
         )}
 
-        {/* Rate This Skill - Only if not rated and not owner */}
+        {/* Rate This Skill Logic Block */}
         {!checkingRating && !hasRated && !isOwnSkill && (
-          <div className="p-4 border-2 border-dashed border-indigo-200 rounded-xl">
-            {!user ? (
-              <div className="text-center p-4">
-                <p className="text-gray-600 mb-3">Sign in to rate this skill</p>
-                <Button
-                  onClick={() => window.location.href = '/sign-in'}
-                  className="bg-indigo-600 hover:bg-indigo-700"
-                >
-                  Sign In
-                </Button>
-              </div>
-            ) : (
-              <>
-                <h3 className="text-lg font-semibold text-gray-900 mb-3">Rate This Skill</h3>
-
-                <div className="space-y-4">
-                  <div>
-                    <p className="text-sm text-gray-600 mb-2">Your Rating:</p>
-                    <InteractiveStarRating
-                      rating={userRating}
-                      onRatingChange={setUserRating}
-                    />
-                  </div>
-
-                  <div>
-                    <p className="text-sm text-gray-600 mb-2">Comment (optional):</p>
-                    <Textarea
-                      value={comment}
-                      onChange={(e) => setComment(e.target.value)}
-                      placeholder="Share your experience with this skill..."
-                      rows={3}
-                      className="resize-none rounded-xl border-2 border-gray-200 focus:border-indigo-500"
-                    />
-                  </div>
-
-                  <Button
-                    onClick={handleSubmitRating}
-                    disabled={userRating === 0 || isSubmitting}
-                    className="w-full bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 disabled:opacity-50"
-                  >
-                    {isSubmitting ? (
-                      <>
-                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                        Submitting...
-                      </>
-                    ) : (
-                      'Submit Rating'
-                    )}
-                  </Button>
+            !user ? (
+                // State 1: Not signed in -> Show sign-in prompt
+                <div className="p-4 border-2 border-dashed border-indigo-200 rounded-xl">
+                    <div className="text-center p-4">
+                        <p className="text-gray-600 mb-3">Sign in to rate this skill</p>
+                        <Button
+                            onClick={() => window.location.href = '/sign-in'}
+                            className="bg-indigo-600 hover:bg-indigo-700"
+                        >
+                            Sign In
+                        </Button>
+                    </div>
                 </div>
-              </>
-            )}
-          </div>
+            ) 
+            : !isEnrolled ? (
+                // State 2: Signed in but NOT enrolled -> Show not enrolled message
+                <div className="p-4 bg-red-50 border border-red-200 rounded-xl">
+                    <div className="flex items-center text-red-800">
+                        <AlertCircle className="h-5 w-5 mr-2" />
+                        <span className="font-medium">You must be enrolled in this course to leave a rating.</span>
+                    </div>
+                </div>
+            )
+            : ( 
+                // State 3: Signed in AND enrolled -> Show the rating form
+                <div className="p-4 border-2 border-dashed border-indigo-200 rounded-xl">
+                    <>
+                        <h3 className="text-xl font-bold text-gray-900 mb-4 flex items-center">
+                            <Star className="h-6 w-6 text-yellow-400 mr-2" fill="currentColor"/>
+                            Rate This Course (10 Parameters)
+                        </h3>
+
+                        <div className="space-y-6">
+                            {/* Parameter Rating Block */}
+                            <div className="space-y-4 p-4 border rounded-xl bg-gray-50">
+                                <p className="text-sm font-medium text-gray-800 border-b pb-2 mb-2">
+                                    Please rate each parameter from 1 to 5 stars:
+                                </p>
+                                {RATING_PARAMETERS.map((param, index) => (
+                                    <div key={param} className="flex flex-col sm:flex-row items-start sm:items-center justify-between border-b last:border-b-0 pb-3">
+                                        <p className="text-sm font-medium text-gray-700 w-full sm:w-1/2 mb-1 sm:mb-0">
+                                            {index + 1}. **{param}**:
+                                        </p>
+                                        <div className="w-full sm:w-auto">
+                                            <InteractiveStarRating
+                                                rating={parameterRatings[param]}
+                                                onRatingChange={(value) => handleParameterRatingChange(param, value)}
+                                                size="sm" 
+                                            />
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                            
+                            {/* Average Rating Display */}
+                            <div className="p-3 bg-indigo-50 border border-indigo-200 rounded-xl flex justify-between items-center">
+                                <p className="text-md font-semibold text-indigo-700">Calculated Average Rating:</p>
+                                <span className="text-xl font-bold text-indigo-900">
+                                    {currentAverage.toFixed(1)} / 5
+                                </span>
+                            </div>
+
+
+                            {/* Comment */}
+                            <div>
+                                <p className="text-sm text-gray-600 mb-2">Comment (optional):</p>
+                                <Textarea
+                                    value={userComment} 
+                                    onChange={(e) => setUserComment(e.target.value)}
+                                    placeholder="Share your overall experience (this will be submitted along with the detailed breakdown)..."
+                                    rows={3}
+                                    className="resize-none rounded-xl border-2 border-gray-200 focus:border-indigo-500"
+                                />
+                            </div>
+
+                            {/* Submit Button */}
+                            <Button
+                                onClick={handleSubmitRating}
+                                disabled={!allRated || isSubmitting} 
+                                className="w-full bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 disabled:opacity-50"
+                            >
+                                {isSubmitting ? (
+                                    <>
+                                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                        Submitting Detailed Rating...
+                                    </>
+                                ) : (
+                                    'Submit 10-Parameter Rating'
+                                )}
+                            </Button>
+                            {!allRated && (
+                                <p className="text-center text-xs text-red-500 mt-2">
+                                    Please provide a rating (1-5) for **all 10 parameters** before submitting.
+                                </p>
+                            )}
+                        </div>
+                    </>
+                </div>
+            )
         )}
       </CardContent>
     </Card>
   );
 }
 
-/* ---------- SkillDetailPage ---------- */
+/* ---------- SkillDetailPage (MODIFIED for enrollment handling) ---------- */
 export default function SkillDetailPage() {
   const { user, isLoaded: userLoaded } = useUser();
   const { getToken } = useAuth();
@@ -453,6 +562,7 @@ export default function SkillDetailPage() {
     );
   };
 
+  // --- MODIFIED handleCheckout to fix free enrollment rating issue ---
   const handleCheckout = async () => {
     if (!skill) return;
 
@@ -474,6 +584,39 @@ export default function SkillDetailPage() {
       return;
     }
 
+    // NEW LOGIC: Handle Free Enrollment (price = 0)
+    if (skill.price === 0) {
+      setEnrollmentLoading(true);
+      try {
+        const token = await getToken();
+        const response = await fetch(`${API_BASE_URL}/enrollments/free-enroll`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          },
+          body: JSON.stringify({ skillId: skill._id })
+        });
+
+        const result = await response.json();
+
+        if (result.success) {
+          setIsEnrolled(true); // <-- FIX: Update local state immediately
+          alert("Successfully enrolled in the free skill! You can now rate it.");
+        } else {
+          alert(result.message || "Failed to enroll in the free skill.");
+        }
+      } catch (error) {
+        console.error("Free enrollment error:", error);
+        alert("An unexpected error occurred during free enrollment.");
+      } finally {
+        setEnrollmentLoading(false);
+      }
+      return; // Stop here if it was a free enrollment
+    }
+    // END NEW LOGIC
+
+    // Paid Enrollment (Stripe checkout)
     try {
       const stripe = await stripePromise;
 
@@ -499,6 +642,7 @@ export default function SkillDetailPage() {
       alert('Failed to initiate payment.');
     }
   };
+  // --- END MODIFIED handleCheckout ---
 
   const handleProposeExchange = () => {
     // Prevent self-exchange
@@ -742,6 +886,7 @@ export default function SkillDetailPage() {
               totalRatings={skill.totalRatings || 0}
               onRatingUpdate={handleRatingUpdate}
               isOwnSkill={isOwnSkill}
+              isEnrolled={isEnrolled} // <--- PASS isEnrolled PROP
             />
           </div>
 
