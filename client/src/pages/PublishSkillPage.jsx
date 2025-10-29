@@ -12,6 +12,7 @@ import { Checkbox } from "@/components/ui/checkbox"
 import { BookOpen, Plus, X, CheckCircle, AlertCircle, Loader2 } from "lucide-react"
 import Navbar from "@/components/Navbar"
 
+
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api'
 
 function Toast({ message, type, onClose }) {
@@ -33,7 +34,7 @@ function Toast({ message, type, onClose }) {
 
 export default function PublishSkillPage() {
   const navigate = useNavigate()
-  const { isSignedIn, isLoaded } = useUser()
+  const { isSignedIn, isLoaded , user} = useUser()
   const { getToken } = useAuth()
 
   // ✅ Redirect logic moved to useEffect
@@ -300,11 +301,11 @@ export default function PublishSkillPage() {
                     <Label className="text-lg font-semibold text-gray-700">Instructor Name *</Label>
                     <Input
                       name="instructor"
-                      value={form.instructor}
+                       value={`${user.firstName ?? ""}${user.lastName ? " " + user.lastName : ""}`}
                       onChange={handleChange}
                       required
                       className="h-12 text-base rounded-xl border-2 border-gray-200 focus:border-indigo-500 transition-colors"
-                      placeholder="Your full name"
+                      readOnly
                     />
                   </div>
                 </div>
