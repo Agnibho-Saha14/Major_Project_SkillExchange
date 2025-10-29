@@ -1,4 +1,5 @@
 const express = require('express');
+const upload = require('../config/multerConfig');
 const {
   getSkills,
   getSkillById,
@@ -20,7 +21,7 @@ const router = express.Router();
 router.get('/', getSkills);
 
 // create skill
-router.post('/', createSkill);
+router.post('/', upload.single('certificate'), createSkill);
 
 // draft
 router.post('/draft', saveDraft);

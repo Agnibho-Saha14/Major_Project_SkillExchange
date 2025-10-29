@@ -2,6 +2,8 @@ const Skill = require('../models/Skill');
 const asyncHandler = require('../utils/asyncHandler');
 const { getAuth } = require('@clerk/express');
 const { clerkClient } = require('@clerk/clerk-sdk-node');
+const { verifyCertificateCredential } = require('../utils/ocrVerification');
+const path = require('path');
 
 async function getUserEmail(userId) {
   if (!userId) return null;
@@ -110,7 +112,7 @@ exports.getSkillForEdit = asyncHandler(async (req, res) => {
   res.json({ success: true, data: skill });
 });
 
-// CREATE skill
+// CREATE skill with OCR verification
 exports.createSkill = asyncHandler(async (req, res) => {
   const { userId } = getAuth(req);
   if (!userId) {
@@ -118,26 +120,92 @@ exports.createSkill = asyncHandler(async (req, res) => {
   }
 
   const email = await getUserEmail(userId);
-  const body = req.body;
 
-  const required = ['title', 'instructor', 'category', 'level', 'duration', 'timePerWeek', 'paymentOptions', 'description'];
+  // Handle form-data input
+  let body;
+  try {
+    body = req.body.skillData ? JSON.parse(req.body.skillData) : req.body;
+  } catch (err) {
+    return res.status(400).json({ success: false, message: 'Invalid skillData format' });
+  }
+
+  // Validate required fields
+  const required = [
+    'title',
+    'instructor',
+    'category',
+    'level',
+    'duration',
+    'timePerWeek',
+    'paymentOptions',
+    'description',
+    'credentialId'
+  ];
+
   const missing = required.filter((f) => !body[f]);
-
   if (missing.length) {
     return res.status(400).json({
       success: false,
-      message: `Missing required fields: ${missing.join(', ')}`
+      message: `Missing required fields: ${missing.join(', ')}`,
     });
   }
 
+  // Check if certificate file is uploaded
+  if (!req.file) {
+    return res.status(400).json({
+      success: false,
+      message: 'Certificate file is required'
+    });
+  }
+
+  // Only verify for images (skip PDF for now as OCR on PDF needs different handling)
+  const isImage = req.file.mimetype.startsWith('image/');
+  
+  if (isImage) {
+    console.log('Starting credential verification...');
+    
+    // Perform OCR verification
+    const certificatePath = path.join(__dirname, '..', req.file.path);
+    const verificationResult = await verifyCertificateCredential(
+      certificatePath,
+      body.credentialId
+    );
+
+    console.log('Verification result:', verificationResult);
+
+    // If verification fails, delete the uploaded file and return error
+    if (!verificationResult.success) {
+      const fs = require('fs').promises;
+      await fs.unlink(certificatePath).catch(() => {});
+      
+      return res.status(400).json({
+        success: false,
+        message: verificationResult.message || 'Credential ID not found in certificate. Please ensure the Credential ID matches exactly with what appears on your certificate.',
+        verificationFailed: true
+      });
+    }
+
+    console.log('Credential verified successfully!');
+  } else {
+    console.log('PDF uploaded - skipping OCR verification (implement PDF OCR if needed)');
+  }
+
+  // Add certificate file info
+  body.certificateUrl = `/uploads/certificates/${req.file.filename}`;
+
+  // Create skill
   const item = await Skill.create({
     ...body,
     ownerId: String(userId),
     email: email || '',
-    status: body.status || 'draft'
+    status: body.status || 'published',
   });
 
-  res.status(201).json({ success: true, message: 'Skill created successfully', data: item });
+  res.status(201).json({
+    success: true,
+    message: 'Skill created successfully with verified credentials',
+    data: item,
+  });
 });
 
 // UPDATE skill (excluding price - price is fixed after creation)
@@ -156,9 +224,9 @@ exports.updateSkill = asyncHandler(async (req, res) => {
 
   // Remove price from the update data to keep it fixed
   const updateData = { ...req.body };
-  delete updateData.price; // Price cannot be updated
-  delete updateData.ownerId; // Owner cannot be changed
-  delete updateData.email; // Email cannot be changed
+  delete updateData.price;
+  delete updateData.ownerId;
+  delete updateData.email;
 
   const updated = await Skill.findByIdAndUpdate(req.params.id, updateData, {
     new: true,
@@ -186,7 +254,7 @@ exports.deleteSkill = asyncHandler(async (req, res) => {
   res.json({ success: true, message: 'Skill deleted successfully' });
 });
 
-// SAVE draft
+// SAVE draft (with OCR verification)
 exports.saveDraft = asyncHandler(async (req, res) => {
   const { userId } = getAuth(req);
   if (!userId) {
@@ -194,8 +262,43 @@ exports.saveDraft = asyncHandler(async (req, res) => {
   }
 
   const email = await getUserEmail(userId);
+
+  // Handle form-data input
+  let body;
+  try {
+    body = req.body.skillData ? JSON.parse(req.body.skillData) : req.body;
+  } catch (err) {
+    return res.status(400).json({ success: false, message: 'Invalid skillData format' });
+  }
+
+  // If certificate and credentialId provided, verify them
+  if (req.file && body.credentialId) {
+    const isImage = req.file.mimetype.startsWith('image/');
+    
+    if (isImage) {
+      const certificatePath = path.join(__dirname, '..', req.file.path);
+      const verificationResult = await verifyCertificateCredential(
+        certificatePath,
+        body.credentialId
+      );
+
+      if (!verificationResult.success) {
+        const fs = require('fs').promises;
+        await fs.unlink(certificatePath).catch(() => {});
+        
+        return res.status(400).json({
+          success: false,
+          message: verificationResult.message,
+          verificationFailed: true
+        });
+      }
+    }
+
+    body.certificateUrl = `/uploads/certificates/${req.file.filename}`;
+  }
+
   const item = await Skill.create({
-    ...req.body,
+    ...body,
     ownerId: String(userId),
     email: email || '',
     status: 'draft'
@@ -235,7 +338,6 @@ exports.addRating = asyncHandler(async (req, res) => {
 
   const { userId } = getAuth(req);
   
-  // Require authentication for rating
   if (!userId) {
     return res.status(401).json({ success: false, message: 'You must be signed in to rate a skill' });
   }
@@ -246,7 +348,6 @@ exports.addRating = asyncHandler(async (req, res) => {
     throw new Error('Skill not found');
   }
 
-  // Prevent owner from rating their own skill
   if (String(item.ownerId) === String(userId)) {
     return res.status(403).json({ 
       success: false, 
@@ -254,7 +355,6 @@ exports.addRating = asyncHandler(async (req, res) => {
     });
   }
 
-  // Check if user has already rated this skill
   const existingRating = item.ratings.find(r => String(r.userId) === String(userId));
   
   if (existingRating) {
@@ -265,7 +365,6 @@ exports.addRating = asyncHandler(async (req, res) => {
     });
   }
 
-  // Add the new rating
   item.ratings.push({
     rating: rNum,
     comment: comment.trim(),
@@ -288,7 +387,7 @@ exports.addRating = asyncHandler(async (req, res) => {
   });
 });
 
-// GET user's rating for a specific skill (NEW ENDPOINT)
+// GET user's rating for a specific skill
 exports.getUserRating = asyncHandler(async (req, res) => {
   const { userId } = getAuth(req);
   
@@ -305,10 +404,7 @@ exports.getUserRating = asyncHandler(async (req, res) => {
     throw new Error('Skill not found');
   }
 
-  // Check if user is the owner
   const isOwner = String(item.ownerId) === String(userId);
-
-  // Find user's rating
   const userRating = item.ratings.find(r => String(r.userId) === String(userId));
 
   res.json({
@@ -320,6 +416,7 @@ exports.getUserRating = asyncHandler(async (req, res) => {
     }
   });
 });
+
 // GET ratings
 exports.getRatings = asyncHandler(async (req, res) => {
   const item = await Skill.findById(req.params.id).select('ratings averageRating totalRatings');

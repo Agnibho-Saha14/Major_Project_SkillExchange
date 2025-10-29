@@ -131,7 +131,7 @@ function RatingSection({ skillId, averageRating, totalRatings, onRatingUpdate, i
     "Value for Money",        // 9
     "Overall Learning Experience", // 10
   ];
-  
+
   // Initialize parameter ratings state (all start at 0)
   const initialParameterRatings = RATING_PARAMETERS.reduce((acc, param) => {
     acc[param] = 0;
@@ -175,49 +175,49 @@ function RatingSection({ skillId, averageRating, totalRatings, onRatingUpdate, i
 
     // Only run check if enrolled to avoid unnecessary API calls and ensure correctness
     if (isEnrolled) {
-        checkUserRating();
+      checkUserRating();
     } else {
-        setCheckingRating(false);
+      setCheckingRating(false);
     }
   }, [isLoaded, user, skillId, getToken, isEnrolled]); // Added isEnrolled as dependency
-  
+
   // Handler for parameter rating changes
   const handleParameterRatingChange = (param, value) => {
     setParameterRatings(prev => ({ ...prev, [param]: value }));
   };
-  
+
   // Calculation for average rating
   const calculateAverageRating = () => {
     const ratingsArray = Object.values(parameterRatings);
-    
+
     const ratedArray = ratingsArray.filter(r => r > 0);
     if (ratedArray.length === 0) return 0;
-    
+
     const sum = ratedArray.reduce((acc, r) => acc + r, 0);
-    return Math.round((sum / ratedArray.length) * 10) / 10; 
+    return Math.round((sum / ratedArray.length) * 10) / 10;
   };
-  
+
   // Function to format the parameter ratings for the backend comment field
   const formatParameterRatings = (avg) => {
-      const breakdown = RATING_PARAMETERS.map(param => 
-        `${param}: ${parameterRatings[param]}/5`
-      ).join('\n');
-      return `Average Rating: ${avg.toFixed(1)}/5\nDetailed Rating Breakdown:\n${breakdown}\n\nUser Comment:\n${userComment.trim()}`;
+    const breakdown = RATING_PARAMETERS.map(param =>
+      `${param}: ${parameterRatings[param]}/5`
+    ).join('\n');
+    return `Average Rating: ${avg.toFixed(1)}/5\nDetailed Rating Breakdown:\n${breakdown}\n\nUser Comment:\n${userComment.trim()}`;
   };
 
   const currentAverage = calculateAverageRating();
-  const allRated = Object.values(parameterRatings).length === RATING_PARAMETERS.length && 
-                   Object.values(parameterRatings).every(r => r > 0);
+  const allRated = Object.values(parameterRatings).length === RATING_PARAMETERS.length &&
+    Object.values(parameterRatings).every(r => r > 0);
 
 
   const handleSubmitRating = async () => {
     if (!allRated) {
-        alert("Please rate all 10 parameters before submitting.");
-        return;
+      alert("Please rate all 10 parameters before submitting.");
+      return;
     }
 
     const avgRating = calculateAverageRating();
-    
+
     setIsSubmitting(true);
     try {
       const token = await getToken();
@@ -292,7 +292,7 @@ function RatingSection({ skillId, averageRating, totalRatings, onRatingUpdate, i
             <span className="text-gray-600">Checking rating status...</span>
           </div>
         )}
-        
+
         {/* Owner Message */}
         {!checkingRating && isOwnSkill && (
           <div className="p-4 bg-blue-50 border border-blue-200 rounded-xl">
@@ -319,7 +319,7 @@ function RatingSection({ skillId, averageRating, totalRatings, onRatingUpdate, i
               {existingRating.comment && (
                 <div className="text-sm text-gray-700">
                   <span className="font-medium">Your comment:</span>
-                  <p className="mt-1 italic whitespace-pre-wrap text-xs md:text-sm">{existingRating.comment}</p> 
+                  <p className="mt-1 italic whitespace-pre-wrap text-xs md:text-sm">{existingRating.comment}</p>
                 </div>
               )}
               <p className="text-xs text-gray-500 mt-2">
@@ -331,105 +331,105 @@ function RatingSection({ skillId, averageRating, totalRatings, onRatingUpdate, i
 
         {/* Rate This Skill Logic Block */}
         {!checkingRating && !hasRated && !isOwnSkill && (
-            !user ? (
-                // State 1: Not signed in -> Show sign-in prompt
-                <div className="p-4 border-2 border-dashed border-indigo-200 rounded-xl">
-                    <div className="text-center p-4">
-                        <p className="text-gray-600 mb-3">Sign in to rate this skill</p>
-                        <Button
-                            onClick={() => window.location.href = '/sign-in'}
-                            className="bg-indigo-600 hover:bg-indigo-700"
-                        >
-                            Sign In
-                        </Button>
-                    </div>
-                </div>
-            ) 
+          !user ? (
+            // State 1: Not signed in -> Show sign-in prompt
+            <div className="p-4 border-2 border-dashed border-indigo-200 rounded-xl">
+              <div className="text-center p-4">
+                <p className="text-gray-600 mb-3">Sign in to rate this skill</p>
+                <Button
+                  onClick={() => window.location.href = '/sign-in'}
+                  className="bg-indigo-600 hover:bg-indigo-700"
+                >
+                  Sign In
+                </Button>
+              </div>
+            </div>
+          )
             : !isEnrolled ? (
-                // State 2: Signed in but NOT enrolled -> Show not enrolled message
-                <div className="p-4 bg-red-50 border border-red-200 rounded-xl">
-                    <div className="flex items-center text-red-800">
-                        <AlertCircle className="h-5 w-5 mr-2" />
-                        <span className="font-medium">You must be enrolled in this course to leave a rating.</span>
-                    </div>
+              // State 2: Signed in but NOT enrolled -> Show not enrolled message
+              <div className="p-4 bg-red-50 border border-red-200 rounded-xl">
+                <div className="flex items-center text-red-800">
+                  <AlertCircle className="h-5 w-5 mr-2" />
+                  <span className="font-medium">You must be enrolled in this course to leave a rating.</span>
                 </div>
+              </div>
             )
-            : ( 
+              : (
                 // State 3: Signed in AND enrolled -> Show the rating form
                 <div className="p-4 border-2 border-dashed border-indigo-200 rounded-xl">
-                    <>
-                        <h3 className="text-xl font-bold text-gray-900 mb-4 flex items-center">
-                            <Star className="h-6 w-6 text-yellow-400 mr-2" fill="currentColor"/>
-                            Rate This Course (10 Parameters)
-                        </h3>
+                  <>
+                    <h3 className="text-xl font-bold text-gray-900 mb-4 flex items-center">
+                      <Star className="h-6 w-6 text-yellow-400 mr-2" fill="currentColor" />
+                      Rate This Course (10 Parameters)
+                    </h3>
 
-                        <div className="space-y-6">
-                            {/* Parameter Rating Block */}
-                            <div className="space-y-4 p-4 border rounded-xl bg-gray-50">
-                                <p className="text-sm font-medium text-gray-800 border-b pb-2 mb-2">
-                                    Please rate each parameter from 1 to 5 stars:
-                                </p>
-                                {RATING_PARAMETERS.map((param, index) => (
-                                    <div key={param} className="flex flex-col sm:flex-row items-start sm:items-center justify-between border-b last:border-b-0 pb-3">
-                                        <p className="text-sm font-medium text-gray-700 w-full sm:w-1/2 mb-1 sm:mb-0">
-                                            {index + 1}. **{param}**:
-                                        </p>
-                                        <div className="w-full sm:w-auto">
-                                            <InteractiveStarRating
-                                                rating={parameterRatings[param]}
-                                                onRatingChange={(value) => handleParameterRatingChange(param, value)}
-                                                size="sm" 
-                                            />
-                                        </div>
-                                    </div>
-                                ))}
+                    <div className="space-y-6">
+                      {/* Parameter Rating Block */}
+                      <div className="space-y-4 p-4 border rounded-xl bg-gray-50">
+                        <p className="text-sm font-medium text-gray-800 border-b pb-2 mb-2">
+                          Please rate each parameter from 1 to 5 stars:
+                        </p>
+                        {RATING_PARAMETERS.map((param, index) => (
+                          <div key={param} className="flex flex-col sm:flex-row items-start sm:items-center justify-between border-b last:border-b-0 pb-3">
+                            <p className="text-sm font-medium text-gray-700 w-full sm:w-1/2 mb-1 sm:mb-0">
+                              {index + 1}. **{param}**:
+                            </p>
+                            <div className="w-full sm:w-auto">
+                              <InteractiveStarRating
+                                rating={parameterRatings[param]}
+                                onRatingChange={(value) => handleParameterRatingChange(param, value)}
+                                size="sm"
+                              />
                             </div>
-                            
-                            {/* Average Rating Display */}
-                            <div className="p-3 bg-indigo-50 border border-indigo-200 rounded-xl flex justify-between items-center">
-                                <p className="text-md font-semibold text-indigo-700">Calculated Average Rating:</p>
-                                <span className="text-xl font-bold text-indigo-900">
-                                    {currentAverage.toFixed(1)} / 5
-                                </span>
-                            </div>
+                          </div>
+                        ))}
+                      </div>
+
+                      {/* Average Rating Display */}
+                      <div className="p-3 bg-indigo-50 border border-indigo-200 rounded-xl flex justify-between items-center">
+                        <p className="text-md font-semibold text-indigo-700">Calculated Average Rating:</p>
+                        <span className="text-xl font-bold text-indigo-900">
+                          {currentAverage.toFixed(1)} / 5
+                        </span>
+                      </div>
 
 
-                            {/* Comment */}
-                            <div>
-                                <p className="text-sm text-gray-600 mb-2">Comment (optional):</p>
-                                <Textarea
-                                    value={userComment} 
-                                    onChange={(e) => setUserComment(e.target.value)}
-                                    placeholder="Share your overall experience (this will be submitted along with the detailed breakdown)..."
-                                    rows={3}
-                                    className="resize-none rounded-xl border-2 border-gray-200 focus:border-indigo-500"
-                                />
-                            </div>
+                      {/* Comment */}
+                      <div>
+                        <p className="text-sm text-gray-600 mb-2">Comment (optional):</p>
+                        <Textarea
+                          value={userComment}
+                          onChange={(e) => setUserComment(e.target.value)}
+                          placeholder="Share your overall experience (this will be submitted along with the detailed breakdown)..."
+                          rows={3}
+                          className="resize-none rounded-xl border-2 border-gray-200 focus:border-indigo-500"
+                        />
+                      </div>
 
-                            {/* Submit Button */}
-                            <Button
-                                onClick={handleSubmitRating}
-                                disabled={!allRated || isSubmitting} 
-                                className="w-full bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 disabled:opacity-50"
-                            >
-                                {isSubmitting ? (
-                                    <>
-                                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                                        Submitting Detailed Rating...
-                                    </>
-                                ) : (
-                                    'Submit 10-Parameter Rating'
-                                )}
-                            </Button>
-                            {!allRated && (
-                                <p className="text-center text-xs text-red-500 mt-2">
-                                    Please provide a rating (1-5) for **all 10 parameters** before submitting.
-                                </p>
-                            )}
-                        </div>
-                    </>
+                      {/* Submit Button */}
+                      <Button
+                        onClick={handleSubmitRating}
+                        disabled={!allRated || isSubmitting}
+                        className="w-full bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 disabled:opacity-50"
+                      >
+                        {isSubmitting ? (
+                          <>
+                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                            Submitting Detailed Rating...
+                          </>
+                        ) : (
+                          'Submit 10-Parameter Rating'
+                        )}
+                      </Button>
+                      {!allRated && (
+                        <p className="text-center text-xs text-red-500 mt-2">
+                          Please provide a rating (1-5) for **all 10 parameters** before submitting.
+                        </p>
+                      )}
+                    </div>
+                  </>
                 </div>
-            )
+              )
         )}
       </CardContent>
     </Card>
@@ -812,6 +812,32 @@ export default function SkillDetailPage() {
                   <h3 className="text-xl font-bold text-gray-900 mb-3">About This Skill</h3>
                   <p className="text-gray-700 leading-relaxed">{skill.description}</p>
                 </div>
+
+                {/* Certificate Verification Section */}
+                {skill.credentialId && (
+                  <div className="mb-6">
+                    <div className="p-4 bg-gradient-to-r from-green-50 to-emerald-50 border-2 border-green-200 rounded-xl">
+                      <div className="flex items-center space-x-3">
+                        <CheckCircle className="h-6 w-6 text-green-600 flex-shrink-0" />
+                        <div className="flex-1">
+                          <p className="text-sm font-medium text-gray-700 mb-1">
+                            Certificate Uploaded
+                          </p>
+                          <p className="text-sm text-gray-600">
+                            <span className="font-semibold">Credential ID:</span>{" "}
+                            <span className="font-mono bg-white px-2 py-1 rounded border border-green-200">
+                              {skill.credentialId}
+                            </span>
+                          </p>
+                        </div>
+                        <div className="flex items-center space-x-1 px-3 py-1 bg-green-100 rounded-full">
+                          <CheckCircle className="h-4 w-4 text-green-700" />
+                          <span className="text-xs font-semibold text-green-700">Verified</span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
 
                 {/* Prerequisites */}
                 {skill.prerequisites && (

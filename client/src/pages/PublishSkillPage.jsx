@@ -16,11 +16,10 @@ const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api'
 
 function Toast({ message, type, onClose }) {
   if (!message) return null
-  
+
   return (
-    <div className={`fixed top-4 right-4 z-50 p-4 rounded-lg shadow-lg ${
-      type === 'success' ? 'bg-green-500 text-white' : 'bg-red-500 text-white'
-    }`}>
+    <div className={`fixed top-4 right-4 z-50 p-4 rounded-lg shadow-lg ${type === 'success' ? 'bg-green-500 text-white' : 'bg-red-500 text-white'
+      }`}>
       <div className="flex items-center space-x-2">
         {type === 'success' ? <CheckCircle className="h-5 w-5" /> : <AlertCircle className="h-5 w-5" />}
         <span>{message}</span>
@@ -36,7 +35,7 @@ export default function PublishSkillPage() {
   const navigate = useNavigate()
   const { isSignedIn, isLoaded } = useUser()
   const { getToken } = useAuth()
-  
+
   // ✅ Redirect logic moved to useEffect
   useEffect(() => {
     if (isLoaded && !isSignedIn) {
@@ -46,15 +45,17 @@ export default function PublishSkillPage() {
 
 
   const [form, setForm] = useState({
-    title: "", 
-    instructor: "", 
-    category: "", 
-    level: "", 
-    duration: "", 
+    title: "",
+    instructor: "",
+    category: "",
+    level: "",
+    duration: "",
     timePerWeek: "",
-    price: "", 
-    paymentOptions: "paid", 
-    description: "", 
+    certificateFile: null,
+    credentialId: "",
+    price: "",
+    paymentOptions: "paid",
+    description: "",
     skills: [],
     prerequisites: "",
     learningOutcomes: "",
@@ -67,8 +68,10 @@ export default function PublishSkillPage() {
   })
 
   const [skillInput, setSkillInput] = useState("")
+  const [certificatePreview, setCertificatePreview] = useState(null);
   const [isLoading, setIsLoading] = useState(false)
   const [isDraftLoading, setIsDraftLoading] = useState(false)
+
   const [toast, setToast] = useState({ message: '', type: '' })
 
   const showToast = (message, type) => {
@@ -101,84 +104,133 @@ export default function PublishSkillPage() {
     })
   }
 
-  // API call function
-const submitSkill = async (endpoint, successMessage, setLoadingState) => {
-  setLoadingState(true)
-  try {
-    const skillData = {
-      ...form,
-      status: endpoint.includes('draft') ? 'draft' : 'published'
-    }
-
-    if (form.paymentOptions === 'paid' || form.paymentOptions === 'both') {
-      skillData.price = form.price ? parseFloat(form.price) : 0
-    } else {
-      skillData.price = 0
-    }
-
-    // ✅ Get the session token
-    const token = await getToken();
-
-    const response = await fetch(`${API_BASE_URL}${endpoint}`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${token}` // ✅ Add the token to the header
-      },
-      body: JSON.stringify(skillData),
-    })
-
-    const result = await response.json()
-
-    if (result.success) {
-      showToast(successMessage, 'success')
-      setTimeout(() => {
-        navigate('/')
-      }, 2000)
-      if (endpoint === '/skills') {
-        setForm({
-          title: "", 
-          instructor: "", 
-          category: "", 
-          level: "", 
-          duration: "", 
-          timePerWeek: "",
-          price: "", 
-          paymentOptions: "paid", 
-          description: "", 
-          skills: [],
-          prerequisites: "",
-          learningOutcomes: "",
-          teachingFormat: {
-            onlineSessions: false,
-            inPersonSessions: false,
-            flexibleSchedule: false,
-            provideMaterials: false
-          }
-        })
-        setSkillInput("")
+  const handleCertificateChange = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      if (file.size > 5 * 1024 * 1024) {
+        showToast('File size must be less than 5MB', 'error');
+        return;
       }
-    } else {
-      console.error('Backend error:', result)
-      showToast(result.message || 'An error occurred', 'error')
+      setForm({ ...form, certificateFile: file });
+
+      // Create preview for images
+      if (file.type.startsWith('image/')) {
+        const reader = new FileReader();
+        reader.onloadend = () => {
+          setCertificatePreview(reader.result);
+        };
+        reader.readAsDataURL(file);
+      } else {
+        setCertificatePreview(null);
+      }
     }
-  } catch (error) {
-    console.error('Network error:', error)
-    showToast('Failed to connect to server. Please try again.', 'error')
-  } finally {
-    setLoadingState(false)
-  }
-}
+  };
+
+  // API call function
+  const submitSkill = async (endpoint, successMessage, setLoadingState) => {
+    setLoadingState(true);
+    try {
+      const formData = new FormData();
+
+      const skillData = {
+        ...form,
+        status: endpoint.includes('draft') ? 'draft' : 'published'
+      };
+
+      // Remove certificate file before stringifying
+      delete skillData.certificateFile;
+
+      if (form.paymentOptions === 'paid' || form.paymentOptions === 'both') {
+        skillData.price = form.price ? parseFloat(form.price) : 0;
+      } else {
+        skillData.price = 0;
+      }
+
+      formData.append('skillData', JSON.stringify(skillData));
+
+      if (form.certificateFile) {
+        formData.append('certificate', form.certificateFile);
+      }
+
+      const token = await getToken();
+
+      const response = await fetch(`${API_BASE_URL}${endpoint}`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}` // Let browser handle FormData content-type
+        },
+        body: formData,
+      });
+
+      const result = await response.json();
+
+      if (result.success) {
+        showToast(successMessage, 'success');
+        setTimeout(() => {
+          navigate('/');
+        }, 2000);
+
+        if (endpoint === '/skills') {
+          setForm({
+            title: "",
+            instructor: "",
+            category: "",
+            level: "",
+            duration: "",
+            timePerWeek: "",
+            price: "",
+            paymentOptions: "paid",
+            description: "",
+            skills: [],
+            prerequisites: "",
+            learningOutcomes: "",
+            teachingFormat: {
+              onlineSessions: false,
+              inPersonSessions: false,
+              flexibleSchedule: false,
+              provideMaterials: false
+            },
+            certificateFile: null
+          });
+          setSkillInput("");
+        }
+      } else {
+        console.error('Backend error:', result);
+
+        if (result.verificationFailed) {
+          showToast(
+            result.message ||
+            'Credential ID verification failed. Please ensure your Credential ID matches exactly with what appears on your certificate.',
+            'error'
+          );
+        } else {
+          showToast(result.message || 'An error occurred', 'error');
+        }
+      }
+    } catch (error) {
+      console.error('Network error:', error);
+      showToast('Failed to connect to server. Please try again.', 'error');
+    } finally {
+      setLoadingState(false);
+    }
+  };
+
 
   const handleSubmit = (e) => {
     e.preventDefault()
-    
-    // Validate required fields
-    const requiredFields = ['title', 'instructor', 'category', 'level', 'duration', 'timePerWeek', 'description']
-    const emptyFields = requiredFields.filter(field => !form[field].trim())
-    
+
+    // Updated required fields to include credentialId
+    const requiredFields = ['title', 'instructor', 'category', 'level', 'duration', 'timePerWeek', 'description', 'credentialId']
+    const emptyFields = requiredFields.filter(field => !form[field] || !form[field].toString().trim())
+
     if (emptyFields.length > 0) {
       showToast(`Please fill in all required fields: ${emptyFields.join(', ')}`, 'error')
+      return
+    }
+
+    // Validate certificate upload
+    if (!form.certificateFile) {
+      showToast('Please upload your certificate', 'error')
       return
     }
 
@@ -197,25 +249,25 @@ const submitSkill = async (endpoint, successMessage, setLoadingState) => {
     submitSkill('/skills', 'Skill published successfully!', setIsLoading)
   }
 
+
   const handleSaveDraft = () => {
     submitSkill('/skills/draft', 'Skill saved as draft successfully!', setIsDraftLoading)
   }
-  
+
   if (!isLoaded) {
-    // This return handles the initial loading state before Clerk is ready
     return (
       <div className="min-h-screen flex items-center justify-center">
         <Loader2 className="h-12 w-12 animate-spin text-indigo-600" />
       </div>
     )
   }
-  
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-white to-purple-50">
-      <Toast 
-        message={toast.message} 
-        type={toast.type} 
-        onClose={() => setToast({ message: '', type: '' })} 
+      <Toast
+        message={toast.message}
+        type={toast.type}
+        onClose={() => setToast({ message: '', type: '' })}
       />
 
       {/* Header */}
@@ -235,22 +287,22 @@ const submitSkill = async (endpoint, successMessage, setLoadingState) => {
                 <div className="grid md:grid-cols-2 gap-6">
                   <div className="space-y-2">
                     <Label className="text-lg font-semibold text-gray-700">Skill Title *</Label>
-                    <Input 
-                      name="title" 
-                      value={form.title} 
-                      onChange={handleChange} 
-                      required 
+                    <Input
+                      name="title"
+                      value={form.title}
+                      onChange={handleChange}
+                      required
                       className="h-12 text-base rounded-xl border-2 border-gray-200 focus:border-indigo-500 transition-colors"
                       placeholder="e.g., Web Development Fundamentals"
                     />
                   </div>
                   <div className="space-y-2">
                     <Label className="text-lg font-semibold text-gray-700">Instructor Name *</Label>
-                    <Input 
-                      name="instructor" 
-                      value={form.instructor} 
-                      onChange={handleChange} 
-                      required 
+                    <Input
+                      name="instructor"
+                      value={form.instructor}
+                      onChange={handleChange}
+                      required
                       className="h-12 text-base rounded-xl border-2 border-gray-200 focus:border-indigo-500 transition-colors"
                       placeholder="Your full name"
                     />
@@ -260,18 +312,18 @@ const submitSkill = async (endpoint, successMessage, setLoadingState) => {
                 <div className="grid md:grid-cols-2 gap-6">
                   <div className="space-y-2">
                     <Label className="text-lg font-semibold text-gray-700">Category *</Label>
-                    <Input 
-                      name="category" 
-                      value={form.category} 
-                      onChange={handleChange} 
-                      required 
+                    <Input
+                      name="category"
+                      value={form.category}
+                      onChange={handleChange}
+                      required
                       className="h-12 text-base rounded-xl border-2 border-gray-200 focus:border-indigo-500 transition-colors"
                       placeholder="e.g., Programming, Design, Music"
                     />
                   </div>
                   <div className="space-y-2">
                     <Label className="text-lg font-semibold text-gray-700">Skill Level *</Label>
-                    <Select value={form.level} onValueChange={(v)=>setForm({...form,level:v})}>
+                    <Select value={form.level} onValueChange={(v) => setForm({ ...form, level: v })}>
                       <SelectTrigger className="h-12 text-base rounded-xl border-2 border-gray-200 focus:border-indigo-500 bg-white">
                         <SelectValue placeholder="Select level" />
                       </SelectTrigger>
@@ -287,22 +339,22 @@ const submitSkill = async (endpoint, successMessage, setLoadingState) => {
                 <div className="grid md:grid-cols-2 gap-6">
                   <div className="space-y-2">
                     <Label className="text-lg font-semibold text-gray-700">Course Duration *</Label>
-                    <Input 
-                      name="duration" 
-                      value={form.duration} 
-                      onChange={handleChange} 
-                      required 
+                    <Input
+                      name="duration"
+                      value={form.duration}
+                      onChange={handleChange}
+                      required
                       className="h-12 text-base rounded-xl border-2 border-gray-200 focus:border-indigo-500 transition-colors"
                       placeholder="e.g., 8 weeks, 3 months"
                     />
                   </div>
                   <div className="space-y-2">
                     <Label className="text-lg font-semibold text-gray-700">Hours per Week *</Label>
-                    <Input 
-                      name="timePerWeek" 
-                      value={form.timePerWeek} 
-                      onChange={handleChange} 
-                      required 
+                    <Input
+                      name="timePerWeek"
+                      value={form.timePerWeek}
+                      onChange={handleChange}
+                      required
                       className="h-12 text-base rounded-xl border-2 border-gray-200 focus:border-indigo-500 transition-colors"
                       placeholder="e.g., 5 hours"
                     />
@@ -310,12 +362,92 @@ const submitSkill = async (endpoint, successMessage, setLoadingState) => {
                 </div>
               </div>
 
+              {/*Certificate section*/}
+              <div className="p-6 border-2 border-gray-200 rounded-2xl bg-gradient-to-r from-amber-50 to-orange-50">
+                <Label className="text-xl font-bold text-gray-800 mb-4 block">
+                  Learning Credentials
+                </Label>
+                <p className="text-sm text-gray-600 mb-4">
+                  Upload your certificate with proper Credential ID to verify your expertise
+                </p>
+
+                <div className="space-y-4">
+                  {/* Credential ID Input */}
+                  <div className="space-y-2">
+                    <Label className="text-lg font-semibold text-gray-700">
+                      Credential ID *
+                    </Label>
+                    <Input
+                      name="credentialId"
+                      value={form.credentialId}
+                      onChange={handleChange}
+                      className="h-12 text-base rounded-xl border-2 border-amber-200 focus:border-amber-500 transition-colors"
+                      placeholder="Enter your certificate credential ID"
+                    />
+                  </div>
+
+                  {/* Certificate Upload */}
+                  <div className="space-y-2">
+                    <Label className="text-lg font-semibold text-gray-700">
+                      Upload Certificate (Image(jpg/jpeg/png)) *
+                    </Label>
+                    <div className="flex items-center justify-center w-full">
+                      <label className="flex flex-col items-center justify-center w-full h-32 border-2 border-amber-300 border-dashed rounded-xl cursor-pointer bg-white hover:bg-amber-50 transition-colors">
+                        <div className="flex flex-col items-center justify-center pt-5 pb-6">
+                          <BookOpen className="w-10 h-10 mb-3 text-amber-500" />
+                          <p className="mb-2 text-sm text-gray-500">
+                            <span className="font-semibold">Click to upload</span> or drag and drop
+                          </p>
+                          <p className="text-xs text-gray-500">PNG, JPG, JPEG or PDF (MAX. 5MB)</p>
+                        </div>
+                        <input
+                          type="file"
+                          className="hidden"
+                          accept="image/jpeg,image/jpg,image/png,application/pdf"
+                          onChange={handleCertificateChange}
+                        />
+                      </label>
+                    </div>
+
+                    {/* Preview */}
+                    {form.certificateFile && (
+                      <div className="mt-3 p-3 bg-white rounded-xl border-2 border-amber-200">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center space-x-3">
+                            <CheckCircle className="h-5 w-5 text-green-500" />
+                            <span className="text-sm font-medium text-gray-700">
+                              {form.certificateFile.name}
+                            </span>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setForm({ ...form, certificateFile: null });
+                              setCertificatePreview(null);
+                            }}
+                            className="text-red-500 hover:text-red-700"
+                          >
+                            <X className="h-5 w-5" />
+                          </button>
+                        </div>
+                        {certificatePreview && (
+                          <img
+                            src={certificatePreview}
+                            alt="Certificate preview"
+                            className="mt-3 max-h-48 rounded-lg object-contain"
+                          />
+                        )}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
               {/* Payment Options Section */}
               <div className="p-6 border-2 border-gray-200 rounded-2xl bg-gradient-to-r from-gray-50 to-indigo-50">
                 <Label className="text-xl font-bold text-gray-800 mb-4 block">Payment & Exchange Options</Label>
-                <RadioGroup 
-                  value={form.paymentOptions} 
-                  onValueChange={(v)=>setForm({...form,paymentOptions:v})} 
+                <RadioGroup
+                  value={form.paymentOptions}
+                  onValueChange={(v) => setForm({ ...form, paymentOptions: v })}
                   className="space-y-4"
                 >
                   <div className="flex items-center space-x-3 p-3 rounded-xl hover:bg-white/50 transition-colors">
@@ -337,12 +469,12 @@ const submitSkill = async (endpoint, successMessage, setLoadingState) => {
                   <div className="mt-6 p-5 bg-gradient-to-r from-green-50 to-emerald-50 border-2 border-green-200 rounded-2xl">
                     <Label className="text-lg font-semibold text-green-800 mb-3 block">Payment Details</Label>
                     <div className="grid md:grid-cols-2 gap-4">
-                      <Input 
-                        type="number" 
-                        placeholder="Price (₹)" 
-                        name="price" 
-                        value={form.price} 
-                        onChange={handleChange} 
+                      <Input
+                        type="number"
+                        placeholder="Price (₹)"
+                        name="price"
+                        value={form.price}
+                        onChange={handleChange}
                         className="h-11 rounded-xl border-2 border-green-200 focus:border-green-500"
                         min="0"
                         step="0.01"
@@ -359,17 +491,17 @@ const submitSkill = async (endpoint, successMessage, setLoadingState) => {
                   <div className="mt-6 p-5 bg-gradient-to-r from-blue-50 to-cyan-50 border-2 border-blue-200 rounded-2xl">
                     <Label className="text-lg font-semibold text-blue-800 mb-3 block">Skills You Want to Learn</Label>
                     <div className="flex space-x-3 mb-3">
-                      <Input 
-                        placeholder="e.g., Digital Marketing" 
-                        value={skillInput} 
-                        onChange={(e)=>setSkillInput(e.target.value)} 
+                      <Input
+                        placeholder="e.g., Digital Marketing"
+                        value={skillInput}
+                        onChange={(e) => setSkillInput(e.target.value)}
                         className="h-11 rounded-xl border-2 border-blue-200 focus:border-blue-500"
                         onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), handleAddSkill())}
                       />
-                      <Button 
-                        type="button" 
-                        onClick={handleAddSkill} 
-                        variant="outline" 
+                      <Button
+                        type="button"
+                        onClick={handleAddSkill}
+                        variant="outline"
                         className="h-11 px-4 rounded-xl border-2 border-blue-200 hover:bg-blue-100"
                       >
                         <Plus className="h-5 w-5" />
@@ -377,8 +509,8 @@ const submitSkill = async (endpoint, successMessage, setLoadingState) => {
                     </div>
                     <div className="flex flex-wrap gap-2">
                       {form.skills.map((skill, index) => (
-                        <span 
-                          key={index} 
+                        <span
+                          key={index}
                           className="inline-flex items-center px-4 py-2 bg-indigo-100 text-indigo-700 rounded-full text-sm font-medium"
                         >
                           {skill}
@@ -399,13 +531,13 @@ const submitSkill = async (endpoint, successMessage, setLoadingState) => {
               {/* Description Section */}
               <div className="space-y-3">
                 <Label className="text-xl font-bold text-gray-800">Description *</Label>
-                <Textarea 
-                  name="description" 
-                  value={form.description} 
-                  onChange={handleChange} 
-                  rows={5} 
-                  placeholder="Describe what you'll teach, your experience, and what students will learn..." 
-                  required 
+                <Textarea
+                  name="description"
+                  value={form.description}
+                  onChange={handleChange}
+                  rows={5}
+                  placeholder="Describe what you'll teach, your experience, and what students will learn..."
+                  required
                   className="text-base rounded-2xl border-2 border-gray-200 focus:border-indigo-500 resize-none"
                 />
               </div>
@@ -414,24 +546,24 @@ const submitSkill = async (endpoint, successMessage, setLoadingState) => {
               <div className="space-y-6 p-6 bg-gradient-to-r from-gray-50 to-blue-50 rounded-2xl border-2 border-gray-200">
                 <div className="space-y-3">
                   <Label className="text-xl font-bold text-gray-800">Prerequisites</Label>
-                  <Textarea 
-                    name="prerequisites" 
-                    value={form.prerequisites} 
-                    onChange={handleChange} 
-                    rows={3} 
-                    placeholder="What should students know before starting? Any required tools or software?" 
+                  <Textarea
+                    name="prerequisites"
+                    value={form.prerequisites}
+                    onChange={handleChange}
+                    rows={3}
+                    placeholder="What should students know before starting? Any required tools or software?"
                     className="text-base rounded-xl border-2 border-gray-200 focus:border-blue-500 resize-none"
                   />
                 </div>
 
                 <div className="space-y-3">
                   <Label className="text-xl font-bold text-gray-800">Learning Outcomes</Label>
-                  <Textarea 
-                    name="learningOutcomes" 
-                    value={form.learningOutcomes} 
-                    onChange={handleChange} 
-                    rows={3} 
-                    placeholder="What will students be able to do after completing this course?" 
+                  <Textarea
+                    name="learningOutcomes"
+                    value={form.learningOutcomes}
+                    onChange={handleChange}
+                    rows={3}
+                    placeholder="What will students be able to do after completing this course?"
                     className="text-base rounded-xl border-2 border-gray-200 focus:border-blue-500 resize-none"
                   />
                 </div>
@@ -441,7 +573,7 @@ const submitSkill = async (endpoint, successMessage, setLoadingState) => {
                   <Label className="text-xl font-bold text-gray-800">Teaching Format</Label>
                   <div className="grid grid-cols-2 gap-4">
                     <div className="flex items-center space-x-3 p-3 rounded-xl bg-white/50">
-                      <Checkbox 
+                      <Checkbox
                         id="onlineSessions"
                         checked={form.teachingFormat.onlineSessions}
                         onCheckedChange={(checked) => handleTeachingFormatChange('onlineSessions', checked)}
@@ -450,7 +582,7 @@ const submitSkill = async (endpoint, successMessage, setLoadingState) => {
                       <Label htmlFor="onlineSessions" className="text-base font-medium cursor-pointer">Online Sessions</Label>
                     </div>
                     <div className="flex items-center space-x-3 p-3 rounded-xl bg-white/50">
-                      <Checkbox 
+                      <Checkbox
                         id="inPersonSessions"
                         checked={form.teachingFormat.inPersonSessions}
                         onCheckedChange={(checked) => handleTeachingFormatChange('inPersonSessions', checked)}
@@ -459,7 +591,7 @@ const submitSkill = async (endpoint, successMessage, setLoadingState) => {
                       <Label htmlFor="inPersonSessions" className="text-base font-medium cursor-pointer">In-Person Sessions</Label>
                     </div>
                     <div className="flex items-center space-x-3 p-3 rounded-xl bg-white/50">
-                      <Checkbox 
+                      <Checkbox
                         id="flexibleSchedule"
                         checked={form.teachingFormat.flexibleSchedule}
                         onCheckedChange={(checked) => handleTeachingFormatChange('flexibleSchedule', checked)}
@@ -468,7 +600,7 @@ const submitSkill = async (endpoint, successMessage, setLoadingState) => {
                       <Label htmlFor="flexibleSchedule" className="text-base font-medium cursor-pointer">Flexible Schedule</Label>
                     </div>
                     <div className="flex items-center space-x-3 p-3 rounded-xl bg-white/50">
-                      <Checkbox 
+                      <Checkbox
                         id="provideMaterials"
                         checked={form.teachingFormat.provideMaterials}
                         onCheckedChange={(checked) => handleTeachingFormatChange('provideMaterials', checked)}
@@ -482,11 +614,11 @@ const submitSkill = async (endpoint, successMessage, setLoadingState) => {
 
               {/* Action Buttons */}
               <div className="flex justify-end space-x-4 pt-6">
-                <Button 
-                  type="button" 
+                <Button
+                  type="button"
                   onClick={handleSaveDraft}
                   disabled={isDraftLoading}
-                  variant="outline" 
+                  variant="outline"
                   className="px-8 py-3 text-base rounded-xl border-2 border-gray-300 hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   {isDraftLoading ? (
@@ -495,10 +627,10 @@ const submitSkill = async (endpoint, successMessage, setLoadingState) => {
                       Saving...
                     </>
                   ) : (
-                    'Save as Draft(Comming Soon)'
+                    'Save as Draft(Coming Soon)'
                   )}
                 </Button>
-                <Button 
+                <Button
                   type="submit"
                   disabled={isLoading}
                   className="px-8 py-3 text-base rounded-xl bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white font-semibold shadow-lg hover:shadow-xl transition-all disabled:opacity-50 disabled:cursor-not-allowed"
