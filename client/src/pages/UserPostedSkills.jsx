@@ -47,7 +47,7 @@ function SkillCard({ skill }) {
     if (paymentOptions === 'exchange') {
       return <span className="text-blue-600 font-semibold">Skill Exchange</span>
     }
-    
+
     if (paymentOptions === 'both') {
       return (
         <div className="flex flex-col">
@@ -56,12 +56,12 @@ function SkillCard({ skill }) {
         </div>
       )
     }
-    
+
     return <span className="text-green-600 font-semibold">₹{price}/course</span>
   }
 
   return (
-    <Card className="h-full hover:shadow-xl transition-all duration-300 border-0 bg-white/80 backdrop-blur-sm hover:bg-white group">
+    <Card className="h-full flex flex-col hover:shadow-xl transition-all duration-300 border-0 bg-white/80 backdrop-blur-sm hover:bg-white group">
       <CardHeader className="pb-3">
         <div className="flex justify-between items-start mb-2">
           <span className="px-3 py-1 bg-indigo-100 text-indigo-700 text-xs font-medium rounded-full">
@@ -76,10 +76,11 @@ function SkillCard({ skill }) {
         </CardTitle>
         <p className="text-gray-600 font-medium">by {skill.instructor}</p>
       </CardHeader>
-      
-      <CardContent className="pt-0">
+
+      {/* Make CardContent flex-grow to push footer down */}
+      <CardContent className="pt-0 flex flex-col flex-grow">
         <p className="text-gray-700 text-sm mb-4 line-clamp-3">{skill.description}</p>
-        
+
         <div className="space-y-3 mb-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center text-gray-600">
@@ -89,7 +90,7 @@ function SkillCard({ skill }) {
               </span>
             </div>
           </div>
-          
+
           <div className="flex items-center justify-between text-sm text-gray-600">
             <div className="flex items-center">
               <Clock className="h-4 w-4 mr-1" />
@@ -102,9 +103,9 @@ function SkillCard({ skill }) {
           </div>
         </div>
 
-        <div className="flex items-center justify-between pt-4 border-t border-gray-200">
+        {/* Footer section pinned to bottom */}
+        <div className="mt-auto pt-4 border-t border-gray-200 flex items-center justify-between">
           <div className="flex items-center">
-            
             {formatPrice(skill.price, skill.priceType, skill.paymentOptions)}
           </div>
           <a href={`/skills/${skill._id}`}>

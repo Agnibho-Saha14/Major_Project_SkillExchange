@@ -9,9 +9,9 @@ import { useUser } from "@clerk/clerk-react"
 export default function SkillCard({ skill, showEditButton = false, onEdit }) {
   const { isSignedIn } = useUser();
   const navigate = useNavigate();
-  
-  function handleSignIn(){
-    if(!isSignedIn){
+
+  function handleSignIn() {
+    if (!isSignedIn) {
       navigate("/login")
     } else {
       navigate(`/skills/${skill._id}`);
@@ -25,7 +25,7 @@ export default function SkillCard({ skill, showEditButton = false, onEdit }) {
       navigate(`/skills/${skill._id}/edit`);
     }
   }
-  
+
   return (
     <Card className="h-full hover:shadow-xl transition-all duration-300 border-0 bg-white/80 backdrop-blur-sm hover:bg-white group">
       <CardHeader className="pb-3">
@@ -54,56 +54,53 @@ export default function SkillCard({ skill, showEditButton = false, onEdit }) {
         </CardTitle>
         <p className="text-gray-600 font-medium">by {skill.instructor}</p>
       </CardHeader>
-      
-      <CardContent className="pt-0">
-        <p className="text-gray-700 text-sm mb-4 line-clamp-3">{skill.description}</p>
-        
-        <div className="space-y-3 mb-4">
-          <div className="flex items-center justify-between">
-            <StarRating 
-              rating={skill.averageRating || 0} 
-              showCount 
-              count={skill.totalRatings || 0}
-            />
-          </div>
-          
-          <div className="flex items-center justify-between text-sm text-gray-600">
-            <div className="flex items-center">
-              <Clock className="h-4 w-4 mr-1" />
-              <span>{skill.duration}</span>
+
+      <CardContent className="pt-0 flex flex-col flex-grow">
+        <div className="flex-grow ">
+          <p className="text-gray-700 text-sm mb-4 line-clamp-3">{skill.description}</p>
+
+          <div className="space-y-3 mb-4">
+            <div className="flex items-center justify-between">
+              <StarRating
+                rating={skill.averageRating || 0}
+                showCount
+                count={skill.totalRatings || 0}
+              />
             </div>
-            <div className="flex items-center">
-              
-              <span>{skill.timePerWeek} hours/week</span>
+
+            <div className="flex items-center justify-between text-sm text-gray-600">
+              <div className="flex items-center">
+                <Clock className="h-4 w-4 mr-1" />
+                <span>{skill.duration}</span>
+              </div>
+              <div className="flex items-center">
+                <span>{skill.timePerWeek} hours/week</span>
+              </div>
             </div>
           </div>
         </div>
 
-        <div className="flex items-center justify-between pt-4 border-t border-gray-200 flex-wrap">
+        <div className="mt-auto flex items-center justify-between pt-4 border-t border-gray-200 flex-wrap">
           <div className="flex items-center mb-2 sm:mb-0">
-            <PriceDisplay 
-              price={skill.price}
-              paymentOptions={skill.paymentOptions}
-            />
+            <PriceDisplay price={skill.price} paymentOptions={skill.paymentOptions} />
           </div>
-          
+
           <div className="flex gap-5 flex-wrap justify-end w-full sm:w-auto">
             {showEditButton && (
-              <Button 
+              <Button
                 onClick={handleEdit}
                 variant="outline"
                 size="xs"
-                className=" text-indigo-600 hover:bg-indigo-50 flex items-center gap-2 border-0"
+                className="text-indigo-600 hover:bg-indigo-50 flex items-center gap-2 border-0"
               >
                 <Edit className="h-3 w-3 p-1" />
                 Edit
               </Button>
             )}
-            <Button 
-              onClick={handleSignIn} 
-              className={`bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white font-semibold rounded-lg transition-all ${
-                showEditButton ? "text-sm px-3 py-1" : "px-4 py-2"
-              }`}
+            <Button
+              onClick={handleSignIn}
+              className={`bg-gradient-to-r from-indigo-600 to-purple-600 cursor-pointer hover:from-indigo-700 hover:to-purple-700 text-white font-semibold rounded-lg transition-all ${showEditButton ? "text-sm px-3 py-1" : "px-4 py-2"
+                }`}
             >
               View Details
             </Button>
