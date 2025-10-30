@@ -43,7 +43,15 @@ export default function PublishSkillPage() {
       navigate("/signup");
     }
   }, [isLoaded, isSignedIn, navigate]);
-
+ 
+  useEffect(() => {
+  if (user) {
+    setForm(prev => ({
+      ...prev,
+      instructor: `${user.firstName ?? ""}${user.lastName ? " " + user.lastName : ""}`
+      }));
+    }
+  }, [user]);
 
   const [form, setForm] = useState({
     title: "",
@@ -221,7 +229,7 @@ export default function PublishSkillPage() {
     e.preventDefault()
 
     // Updated required fields to include credentialId
-    const requiredFields = ['title', 'instructor', 'category', 'level', 'duration', 'timePerWeek', 'description', 'credentialId']
+    const requiredFields = ['title', 'category', 'level', 'duration', 'timePerWeek', 'description', 'credentialId']
     const emptyFields = requiredFields.filter(field => !form[field] || !form[field].toString().trim())
 
     if (emptyFields.length > 0) {
