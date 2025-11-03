@@ -1,5 +1,5 @@
 const express = require('express');
-const upload = require('../config/multerConfig');
+const { upload, validateFileSize, handleMulterError } = require('../config/multerConfig');
 const {
   getSkills,
   getSkillById,
@@ -17,27 +17,38 @@ const {
 
 const router = express.Router();
 
-// list + filters + pagination
+// List + filters + pagination
 router.get('/', getSkills);
 
-// create skill
-router.post('/', upload.single('certificate'), createSkill);
+// Get user's own skills
+router.get('/my-skills', getMySkills);
 
-// draft
-router.post('/draft', saveDraft);
+// Create skill with certificate and optional intro video
+router.post('/', upload.fields([
+  { name: 'certificate', maxCount: 1 },
+  { name: 'introVideo', maxCount: 1 }
+]), createSkill);
 
-// ratings
+// Save draft with certificate and optional intro video
+router.post('/draft', upload.fields([
+  { name: 'certificate', maxCount: 1 },
+  { name: 'introVideo', maxCount: 1 }
+]), saveDraft);
+
+// Ratings
 router.post('/:id/rate', addRating);
 router.get('/:id/ratings', getRatings);
+router.get('/:id/my-rating', getUserRating);
 
-// publish
+// Publish
 router.patch('/:id/publish', publishSkill);
+
+// Get skill for editing (must be before /:id to avoid route conflicts)
+router.get('/:id/edit', getSkillForEdit);
 
 // CRUD by id
 router.get('/:id', getSkillById);
 router.put('/:id', updateSkill);
 router.delete('/:id', deleteSkill);
-router.get('/:id/edit', getSkillForEdit);
-router.get('/skills/:id/my-rating', getUserRating);
 
 module.exports = router;

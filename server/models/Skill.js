@@ -4,7 +4,7 @@ const ratingSchema = new mongoose.Schema(
   {
     rating: { type: Number, required: true, min: 1, max: 5 },
     comment: { type: String, default: '' },
-    userId: { type: String, default: 'anonymous' },
+    userId: { type: String, required: true }, // Made required
     createdAt: { type: Date, default: Date.now }
   },
   { _id: false }
@@ -22,7 +22,7 @@ const teachingFormatSchema = new mongoose.Schema(
 
 const skillSchema = new mongoose.Schema(
   {
-    ownerId: { type: String, required: false }, // <- important for ownership checks
+    ownerId: { type: String, required: false },
     title: { type: String, required: true, trim: true },
     instructor: { type: String, required: true, trim: true },
     category: { type: String, required: true, trim: true },
@@ -31,6 +31,7 @@ const skillSchema = new mongoose.Schema(
     timePerWeek: { type: Number, required: true, trim: true },
     certificateUrl: { type: String, default: '' },
     credentialId: { type: String, default: '', trim: true },
+    introVideoUrl: { type: String, default: '' }, // Added intro video field
     price: { type: Number, default: 0 },
     priceType: { type: String, enum: ['course'] },
     paymentOptions: { type: String, required: true, enum: ['paid', 'exchange', 'both'] },
@@ -40,18 +41,10 @@ const skillSchema = new mongoose.Schema(
     learningOutcomes: { type: String, default: '' },
     teachingFormat: { type: teachingFormatSchema, default: () => ({}) },
     status: { type: String, enum: ['draft', 'published', 'inactive'], default: 'draft' },
-    // In your Skill model file
-ratings: [
-  {
-    rating: { type: Number, required: true, min: 1, max: 5 },
-    comment: { type: String, default: '' },
-    userId: { type: String, required: true }, // Make this required
-    createdAt: { type: Date, default: Date.now }
-  }
-],
+    ratings: [ratingSchema], // Using the ratingSchema defined above
     averageRating: { type: Number, default: 0, min: 0, max: 5 },
     totalRatings: { type: Number, default: 0, min: 0 },
-    email: { type: String, required: false, default: '' } // not strictly required so create won't fail
+    email: { type: String, required: false, default: '' }
   },
   { timestamps: true }
 );

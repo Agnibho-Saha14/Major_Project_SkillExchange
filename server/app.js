@@ -1,35 +1,57 @@
-// app.js
 const express = require('express');
+const path = require('path');
 const cors = require('cors');
-const { clerkMiddleware } = require('@clerk/express');
-
-const skillRoutes = require('./routes/skillRoutes');
-const categoryRoutes = require('./routes/categoryRoutes');
-const healthRoutes = require('./routes/healthRoutes');
-const paymentRoutes = require('./routes/paymentRoutes');
-const enrollmentRoutes = require('./routes/enrollmentRoutes');
-const exchangeRoutes = require('./routes/exchangeRoutes');  // ADDED: Import new enrollment routes
-
-const notFound = require('./middleware/notFound');
-const { errorHandler } = require('./middleware/errorHandler');
+const { clerkMiddleware } = require('@clerk/express'); // 👈 import Clerk middleware
 
 const app = express();
-app.use('/uploads', express.static('uploads'));
 
-app.use(cors());
+// ⭐ Apply Clerk middleware FIRST
+app.use(clerkMiddleware()); // 👈 must be before routes using getAuth()
+
+// CORS configuration
+app.use(cors({
+  origin: process.env.FRONTEND_URL || 'http://localhost:5173',
+  credentials: true
+}));
+
+// Body parser middleware
 app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
 
-// Add Clerk middleware
-app.use(clerkMiddleware());
+// ⭐ Serve static files from uploads directory
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
+// Optional: log static file requests for debugging
+app.use('/uploads', (req, res, next) => {
+  console.log('Static file request:', req.path);
+  next();
+});
+
+// Import routes
+const skillRoutes = require('./routes/skillRoutes');
+const enrollmentRoutes = require('./routes/enrollmentRoutes');
+// ... other routes
+
+// Use routes (after clerkMiddleware)
 app.use('/api/skills', skillRoutes);
-app.use('/api/categories', categoryRoutes);
-app.use('/api/health', healthRoutes);
-app.use('/api/payments', paymentRoutes);
 app.use('/api/enrollments', enrollmentRoutes);
-app.use('/api/exchange', exchangeRoutes); 
+// ... other routes
 
-app.use(notFound);
-app.use(errorHandler);
+// Error handling middleware
+app.use((err, req, res, next) => {
+  console.error(err.stack);
+  res.status(500).json({
+    success: false,
+    message: 'Something went wrong!',
+    error: process.env.NODE_ENV === 'development' ? err.message : undefined
+  });
+});
+
+const PORT = process.env.PORT || 5000;
+
+app.listen(PORT, () => {
+  console.log(`Server running on port ${PORT}`);
+  console.log(`Static files served from: ${path.join(__dirname, 'uploads')}`);
+});
 
 module.exports = app;
