@@ -20,11 +20,43 @@ import {
   Loader2,
   AlertCircle,
   Mail,
-  Shield
+  Shield,
+  Maximize2,
+  X
 } from "lucide-react";
-import { Link, useNavigate } from "react-router-dom"; // NOTE: Assumes you handle useParams or similar for ID extraction
+import { Link, useNavigate } from "react-router-dom";
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+
+/* ---------- VideoModal Component ---------- */
+function VideoModal({ videoUrl, isOpen, onClose }) {
+  if (!isOpen) return null;
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4">
+      <div className="relative w-full max-w-6xl">
+        <button
+          onClick={onClose}
+          className="absolute -top-12 right-0 text-white hover:text-gray-300 transition-colors"
+        >
+          <X className="h-8 w-8" />
+        </button>
+        <div className="bg-black rounded-lg overflow-hidden">
+          <video
+            key={isOpen ? 'modal-video' : 'hidden'}
+            src={videoUrl}
+            controls
+            autoPlay
+            className="w-full h-auto max-h-[85vh]"
+          >
+            Your browser does not support the video tag.
+          </video>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 
 /* ---------- StarRating (No Change) ---------- */
 function StarRating({ rating = 0, size = "md", showNumber = true }) {
@@ -67,7 +99,7 @@ function StarRating({ rating = 0, size = "md", showNumber = true }) {
   );
 }
 
-/* ---------- InteractiveStarRating (MODIFIED for 'sm' size) ---------- */
+/* ---------- InteractiveStarRating ---------- */
 function InteractiveStarRating({ rating, onRatingChange, size = "lg" }) {
   const [hoverRating, setHoverRating] = useState(0);
 
@@ -83,7 +115,6 @@ function InteractiveStarRating({ rating, onRatingChange, size = "lg" }) {
     setHoverRating(0);
   };
 
-  // Determine star size based on 'size' prop
   const starSizeClass = size === "sm" ? "h-5 w-5" : size === "lg" ? "h-8 w-8" : "h-6 w-6";
 
   return (
@@ -109,7 +140,7 @@ function InteractiveStarRating({ rating, onRatingChange, size = "lg" }) {
   );
 }
 
-/* ---------- RatingSection (REPLACED with 10-parameter logic and isEnrolled check) ---------- */
+/* ---------- RatingSection ---------- */
 function RatingSection({ skillId, averageRating, totalRatings, onRatingUpdate, isOwnSkill, isEnrolled }) {
   const { getToken } = useAuth();
   const { user, isLoaded } = useUser();
@@ -118,21 +149,19 @@ function RatingSection({ skillId, averageRating, totalRatings, onRatingUpdate, i
   const [checkingRating, setCheckingRating] = useState(true);
   const [existingRating, setExistingRating] = useState(null);
 
-  // 1. Define the 10 parameters
   const RATING_PARAMETERS = [
-    "Course Content Quality", // 1
-    "Instructor Expertise",   // 2
-    "Clarity of Explanation", // 3
-    "Practical Examples",     // 4
-    "Course Duration",        // 5
-    "Simplicity and Pace",    // 6
-    "Engagement/Interactivity", // 7
-    "Materials Provided",     // 8
-    "Value for Money",        // 9
-    "Overall Learning Experience", // 10
+    "Course Content Quality",
+    "Instructor Expertise",
+    "Clarity of Explanation",
+    "Practical Examples",
+    "Course Duration",
+    "Simplicity and Pace",
+    "Engagement/Interactivity",
+    "Materials Provided",
+    "Value for Money",
+    "Overall Learning Experience",
   ];
 
-  // Initialize parameter ratings state (all start at 0)
   const initialParameterRatings = RATING_PARAMETERS.reduce((acc, param) => {
     acc[param] = 0;
     return acc;
@@ -141,10 +170,8 @@ function RatingSection({ skillId, averageRating, totalRatings, onRatingUpdate, i
   const [parameterRatings, setParameterRatings] = useState(initialParameterRatings);
   const [userComment, setUserComment] = useState("");
 
-  // Check if user has already rated this skill (existing logic)
   useEffect(() => {
     const checkUserRating = async () => {
-      // Only check rating status if user is logged in AND enrollment status is resolved AND user is enrolled
       if (!isLoaded || !user || !skillId || !isEnrolled) {
         setCheckingRating(false);
         return;
@@ -173,31 +200,25 @@ function RatingSection({ skillId, averageRating, totalRatings, onRatingUpdate, i
       }
     };
 
-    // Only run check if enrolled to avoid unnecessary API calls and ensure correctness
     if (isEnrolled) {
       checkUserRating();
     } else {
       setCheckingRating(false);
     }
-  }, [isLoaded, user, skillId, getToken, isEnrolled]); // Added isEnrolled as dependency
+  }, [isLoaded, user, skillId, getToken, isEnrolled]);
 
-  // Handler for parameter rating changes
   const handleParameterRatingChange = (param, value) => {
     setParameterRatings(prev => ({ ...prev, [param]: value }));
   };
 
-  // Calculation for average rating
   const calculateAverageRating = () => {
     const ratingsArray = Object.values(parameterRatings);
-
     const ratedArray = ratingsArray.filter(r => r > 0);
     if (ratedArray.length === 0) return 0;
-
     const sum = ratedArray.reduce((acc, r) => acc + r, 0);
     return Math.round((sum / ratedArray.length) * 10) / 10;
   };
 
-  // Function to format the parameter ratings for the backend comment field
   const formatParameterRatings = (avg) => {
     const breakdown = RATING_PARAMETERS.map(param =>
       `${param}: ${parameterRatings[param]}/5`
@@ -208,7 +229,6 @@ function RatingSection({ skillId, averageRating, totalRatings, onRatingUpdate, i
   const currentAverage = calculateAverageRating();
   const allRated = Object.values(parameterRatings).length === RATING_PARAMETERS.length &&
     Object.values(parameterRatings).every(r => r > 0);
-
 
   const handleSubmitRating = async () => {
     if (!allRated) {
@@ -228,8 +248,8 @@ function RatingSection({ skillId, averageRating, totalRatings, onRatingUpdate, i
           "Authorization": `Bearer ${token}`
         },
         body: JSON.stringify({
-          rating: avgRating, // Send the calculated average rating
-          comment: formatParameterRatings(avgRating), // Send the detailed breakdown in the comment field
+          rating: avgRating,
+          comment: formatParameterRatings(avgRating),
         }),
       });
 
@@ -244,7 +264,7 @@ function RatingSection({ skillId, averageRating, totalRatings, onRatingUpdate, i
         });
         setParameterRatings(initialParameterRatings);
         setUserComment("");
-        onRatingUpdate(result.data); // Update the parent component's total/avg rating
+        onRatingUpdate(result.data);
       } else {
         if (result.alreadyRated) {
           setHasRated(true);
@@ -270,7 +290,6 @@ function RatingSection({ skillId, averageRating, totalRatings, onRatingUpdate, i
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-6">
-        {/* Current Rating Display */}
         <div className="flex items-center justify-between p-4 bg-gradient-to-r from-yellow-50 to-orange-50 rounded-xl">
           <div>
             <div className="flex items-center space-x-3">
@@ -285,7 +304,6 @@ function RatingSection({ skillId, averageRating, totalRatings, onRatingUpdate, i
           </div>
         </div>
 
-        {/* Loading state while checking */}
         {checkingRating && (isEnrolled || hasRated) && (
           <div className="flex items-center justify-center p-4">
             <Loader2 className="h-5 w-5 animate-spin text-indigo-600 mr-2" />
@@ -293,7 +311,6 @@ function RatingSection({ skillId, averageRating, totalRatings, onRatingUpdate, i
           </div>
         )}
 
-        {/* Owner Message */}
         {!checkingRating && isOwnSkill && (
           <div className="p-4 bg-blue-50 border border-blue-200 rounded-xl">
             <div className="flex items-center text-blue-800">
@@ -303,7 +320,6 @@ function RatingSection({ skillId, averageRating, totalRatings, onRatingUpdate, i
           </div>
         )}
 
-        {/* Already Rated Message */}
         {!checkingRating && hasRated && !isOwnSkill && existingRating && (
           <div className="p-4 bg-green-50 border border-green-200 rounded-xl space-y-3">
             <div className="flex items-center text-green-800">
@@ -329,10 +345,8 @@ function RatingSection({ skillId, averageRating, totalRatings, onRatingUpdate, i
           </div>
         )}
 
-        {/* Rate This Skill Logic Block */}
         {!checkingRating && !hasRated && !isOwnSkill && (
           !user ? (
-            // State 1: Not signed in -> Show sign-in prompt
             <div className="p-4 border-2 border-dashed border-indigo-200 rounded-xl">
               <div className="text-center p-4">
                 <p className="text-gray-600 mb-3">Sign in to rate this skill</p>
@@ -344,108 +358,100 @@ function RatingSection({ skillId, averageRating, totalRatings, onRatingUpdate, i
                 </Button>
               </div>
             </div>
-          )
-            : !isEnrolled ? (
-              // State 2: Signed in but NOT enrolled -> Show not enrolled message
-              <div className="p-4 bg-red-50 border border-red-200 rounded-xl">
-                <div className="flex items-center text-red-800">
-                  <AlertCircle className="h-5 w-5 mr-2" />
-                  <span className="font-medium">You must be enrolled in this course to leave a rating.</span>
-                </div>
+          ) : !isEnrolled ? (
+            <div className="p-4 bg-red-50 border border-red-200 rounded-xl">
+              <div className="flex items-center text-red-800">
+                <AlertCircle className="h-5 w-5 mr-2" />
+                <span className="font-medium">You must be enrolled in this course to leave a rating.</span>
               </div>
-            )
-              : (
-                // State 3: Signed in AND enrolled -> Show the rating form
-                <div className="p-4 border-2 border-dashed border-indigo-200 rounded-xl">
-                  <>
-                    <h3 className="text-xl font-bold text-gray-900 mb-4 flex items-center">
-                      <Star className="h-6 w-6 text-yellow-400 mr-2" fill="currentColor" />
-                      Rate This Course (10 Parameters)
-                    </h3>
+            </div>
+          ) : (
+            <div className="p-4 border-2 border-dashed border-indigo-200 rounded-xl">
+              <>
+                <h3 className="text-xl font-bold text-gray-900 mb-4 flex items-center">
+                  <Star className="h-6 w-6 text-yellow-400 mr-2" fill="currentColor" />
+                  Rate This Course (10 Parameters)
+                </h3>
 
-                    <div className="space-y-6">
-                      {/* Parameter Rating Block */}
-                      <div className="space-y-4 p-4 border rounded-xl bg-gray-50">
-                        <p className="text-sm font-medium text-gray-800 border-b pb-2 mb-2">
-                          Please rate each parameter from 1 to 5 stars:
+                <div className="space-y-6">
+                  <div className="space-y-4 p-4 border rounded-xl bg-gray-50">
+                    <p className="text-sm font-medium text-gray-800 border-b pb-2 mb-2">
+                      Please rate each parameter from 1 to 5 stars:
+                    </p>
+                    {RATING_PARAMETERS.map((param, index) => (
+                      <div key={param} className="flex flex-col sm:flex-row items-start sm:items-center justify-between border-b last:border-b-0 pb-3">
+                        <p className="text-sm font-medium text-gray-700 w-full sm:w-1/2 mb-1 sm:mb-0">
+                          {index + 1}. **{param}**:
                         </p>
-                        {RATING_PARAMETERS.map((param, index) => (
-                          <div key={param} className="flex flex-col sm:flex-row items-start sm:items-center justify-between border-b last:border-b-0 pb-3">
-                            <p className="text-sm font-medium text-gray-700 w-full sm:w-1/2 mb-1 sm:mb-0">
-                              {index + 1}. **{param}**:
-                            </p>
-                            <div className="w-full sm:w-auto">
-                              <InteractiveStarRating
-                                rating={parameterRatings[param]}
-                                onRatingChange={(value) => handleParameterRatingChange(param, value)}
-                                size="sm"
-                              />
-                            </div>
-                          </div>
-                        ))}
+                        <div className="w-full sm:w-auto">
+                          <InteractiveStarRating
+                            rating={parameterRatings[param]}
+                            onRatingChange={(value) => handleParameterRatingChange(param, value)}
+                            size="sm"
+                          />
+                        </div>
                       </div>
+                    ))}
+                  </div>
 
-                      {/* Average Rating Display */}
-                      <div className="p-3 bg-indigo-50 border border-indigo-200 rounded-xl flex justify-between items-center">
-                        <p className="text-md font-semibold text-indigo-700">Calculated Average Rating:</p>
-                        <span className="text-xl font-bold text-indigo-900">
-                          {currentAverage.toFixed(1)} / 5
-                        </span>
-                      </div>
+                  <div className="p-3 bg-indigo-50 border border-indigo-200 rounded-xl flex justify-between items-center">
+                    <p className="text-md font-semibold text-indigo-700">Calculated Average Rating:</p>
+                    <span className="text-xl font-bold text-indigo-900">
+                      {currentAverage.toFixed(1)} / 5
+                    </span>
+                  </div>
 
+                  <div>
+                    <p className="text-sm text-gray-600 mb-2">Comment (optional):</p>
+                    <Textarea
+                      value={userComment}
+                      onChange={(e) => setUserComment(e.target.value)}
+                      placeholder="Share your overall experience (this will be submitted along with the detailed breakdown)..."
+                      rows={3}
+                      className="resize-none rounded-xl border-2 border-gray-200 focus:border-indigo-500"
+                    />
+                  </div>
 
-                      {/* Comment */}
-                      <div>
-                        <p className="text-sm text-gray-600 mb-2">Comment (optional):</p>
-                        <Textarea
-                          value={userComment}
-                          onChange={(e) => setUserComment(e.target.value)}
-                          placeholder="Share your overall experience (this will be submitted along with the detailed breakdown)..."
-                          rows={3}
-                          className="resize-none rounded-xl border-2 border-gray-200 focus:border-indigo-500"
-                        />
-                      </div>
-
-                      {/* Submit Button */}
-                      <Button
-                        onClick={handleSubmitRating}
-                        disabled={!allRated || isSubmitting}
-                        className="w-full bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 disabled:opacity-50"
-                      >
-                        {isSubmitting ? (
-                          <>
-                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                            Submitting Detailed Rating...
-                          </>
-                        ) : (
-                          'Submit 10-Parameter Rating'
-                        )}
-                      </Button>
-                      {!allRated && (
-                        <p className="text-center text-xs text-red-500 mt-2">
-                          Please provide a rating (1-5) for **all 10 parameters** before submitting.
-                        </p>
-                      )}
-                    </div>
-                  </>
+                  <Button
+                    onClick={handleSubmitRating}
+                    disabled={!allRated || isSubmitting}
+                    className="w-full bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 disabled:opacity-50"
+                  >
+                    {isSubmitting ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        Submitting Detailed Rating...
+                      </>
+                    ) : (
+                      'Submit 10-Parameter Rating'
+                    )}
+                  </Button>
+                  {!allRated && (
+                    <p className="text-center text-xs text-red-500 mt-2">
+                      Please provide a rating (1-5) for **all 10 parameters** before submitting.
+                    </p>
+                  )}
                 </div>
-              )
+              </>
+            </div>
+          )
         )}
       </CardContent>
     </Card>
   );
 }
 
-/* ---------- SkillDetailPage (MODIFIED for enrollment handling) ---------- */
+/* ---------- SkillDetailPage ---------- */
 export default function SkillDetailPage() {
   const { user, isLoaded: userLoaded } = useUser();
   const { getToken } = useAuth();
   const navigate = useNavigate();
   const [skillId, setSkillId] = useState('');
+  const [isVideoModalOpen, setIsVideoModalOpen] = useState(false);
 
   useEffect(() => {
     const parts = window.location.pathname.split('/');
-    const id = parts.pop() || parts.pop(); // handle trailing slash
+    const id = parts.pop() || parts.pop();
     setSkillId(id);
   }, []);
 
@@ -455,7 +461,6 @@ export default function SkillDetailPage() {
   const [isEnrolled, setIsEnrolled] = useState(false);
   const [enrollmentLoading, setEnrollmentLoading] = useState(false);
 
-  // Check if current user is the skill owner
   const isOwnSkill = userLoaded && user && skill &&
     (user.emailAddresses[0]?.emailAddress === skill.email ||
       user.emailAddresses.some(email => email.emailAddress === skill.email));
@@ -516,12 +521,10 @@ export default function SkillDetailPage() {
     if (skillId) {
       fetchSkillDetails();
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [skillId]);
 
   useEffect(() => {
     checkEnrollmentStatus();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [userLoaded, user, skillId, getToken]);
 
   const handleRatingUpdate = (updatedSkill) => {
@@ -562,29 +565,24 @@ export default function SkillDetailPage() {
     );
   };
 
-  // --- MODIFIED handleCheckout to fix free enrollment rating issue ---
   const handleCheckout = async () => {
     if (!skill) return;
 
-    // Prevent self-enrollment
     if (isOwnSkill) {
       alert('You cannot enroll in your own course.');
       return;
     }
 
-    // Check if user is authenticated
     if (!userLoaded || !user) {
       alert('Please sign in to enroll in this course.');
       return;
     }
 
-    // Check if already enrolled
     if (isEnrolled) {
       alert('You are already enrolled in this course.');
       return;
     }
 
-    // NEW LOGIC: Handle Free Enrollment (price = 0)
     if (skill.price === 0) {
       setEnrollmentLoading(true);
       try {
@@ -601,7 +599,7 @@ export default function SkillDetailPage() {
         const result = await response.json();
 
         if (result.success) {
-          setIsEnrolled(true); // <-- FIX: Update local state immediately
+          setIsEnrolled(true);
           alert("Successfully enrolled in the free skill! You can now rate it.");
         } else {
           alert(result.message || "Failed to enroll in the free skill.");
@@ -612,11 +610,9 @@ export default function SkillDetailPage() {
       } finally {
         setEnrollmentLoading(false);
       }
-      return; // Stop here if it was a free enrollment
+      return;
     }
-    // END NEW LOGIC
 
-    // Paid Enrollment (Stripe checkout)
     try {
       const stripe = await stripePromise;
 
@@ -642,10 +638,8 @@ export default function SkillDetailPage() {
       alert('Failed to initiate payment.');
     }
   };
-  // --- END MODIFIED handleCheckout ---
 
   const handleProposeExchange = () => {
-    // Prevent self-exchange
     if (isOwnSkill) {
       alert('You cannot propose an exchange for your own skill.');
       return;
@@ -659,14 +653,13 @@ export default function SkillDetailPage() {
       return;
     }
 
-    // Navigate to exchange proposal flow, passing necessary state
     navigate("/propose-exchange", {
       state: {
         skillId: skill._id,
         instructorEmail: skill.email,
         instructorName: skill.instructor,
         courseTitle: skill.title,
-        wantedSkills: skill.skills // Instructor's wanted skills
+        wantedSkills: skill.skills
       },
     });
   };
@@ -687,7 +680,6 @@ export default function SkillDetailPage() {
     });
   }
 
-  // Show loading while user data is being fetched
   if (!userLoaded || loading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-white to-purple-50">
@@ -722,7 +714,6 @@ export default function SkillDetailPage() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-white to-purple-50">
       <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Back Button */}
         <Link to="/">
           <Button
             variant="outline"
@@ -735,7 +726,6 @@ export default function SkillDetailPage() {
 
         <div className="grid lg:grid-cols-3 gap-8">
           <div className="lg:col-span-2 space-y-6">
-            {/* Header Card */}
             <Card className="bg-white/80 backdrop-blur-sm border-0 shadow-xl">
               <CardHeader className="bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-t-lg p-6">
                 <div className="flex items-center justify-between mb-2">
@@ -766,7 +756,6 @@ export default function SkillDetailPage() {
                   <span className="text-indigo-100 text-lg">by {skill.instructor}</span>
                 </div>
 
-                {/* Display instructor email */}
                 {skill.email && (
                   <div className="flex items-center mt-2">
                     <Mail className="h-4 w-4 mr-2 text-indigo-200" />
@@ -776,7 +765,6 @@ export default function SkillDetailPage() {
               </CardHeader>
 
               <CardContent className="p-6">
-                {/* Quick Stats */}
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
                   <div className="text-center p-3 bg-gray-50 rounded-xl">
                     <StarRating rating={skill.averageRating || 0} size="sm" />
@@ -806,6 +794,28 @@ export default function SkillDetailPage() {
                     <p className="text-xs text-gray-600 mt-1">Level</p>
                   </div>
                 </div>
+
+                {skill.introVideoUrl && (
+                  <div className="mb-6">
+                    <h3 className="text-xl font-bold text-gray-900 mb-3">Course Introduction</h3>
+                    <div className="relative bg-black rounded-xl overflow-hidden group">
+                      <video
+                        src={`${API_BASE_URL.replace('/api', '')}${skill.introVideoUrl}`}
+                        controls
+                        className="w-full h-auto max-h-96"
+                      >
+                        Your browser does not support the video tag.
+                      </video>
+                      <button
+                        onClick={() => setIsVideoModalOpen(true)}
+                        className="absolute top-4 right-4 bg-black/50 hover:bg-black/70 text-white p-2 rounded-lg transition-colors opacity-0 group-hover:opacity-100"
+                        title="View fullscreen"
+                      >
+                        <Maximize2 className="h-5 w-5" />
+                      </button>
+                    </div>
+                  </div>
+                )}
 
                 {/* Description */}
                 <div className="mb-6">
@@ -905,20 +915,18 @@ export default function SkillDetailPage() {
               </CardContent>
             </Card>
 
-            {/* Rating Section */}
             <RatingSection
               skillId={skill._id}
               averageRating={skill.averageRating || 0}
               totalRatings={skill.totalRatings || 0}
               onRatingUpdate={handleRatingUpdate}
               isOwnSkill={isOwnSkill}
-              isEnrolled={isEnrolled} // <--- PASS isEnrolled PROP
+              isEnrolled={isEnrolled}
             />
           </div>
 
           <div className="lg:col-span-1">
             <div className="sticky top-8 space-y-4">
-              {/* Pricing Card */}
               <Card className="bg-white/80 backdrop-blur-sm border-0 shadow-xl">
                 <CardHeader className="text-center">
                   <CardTitle className="text-2xl font-bold text-gray-900">
@@ -952,7 +960,6 @@ export default function SkillDetailPage() {
                     </div>
                   ) : (
                     <>
-                      {/* Show both buttons for 'both' payment option */}
                       {skill.paymentOptions === 'both' ? (
                         <div className="space-y-3">
                           <Button
@@ -988,9 +995,7 @@ export default function SkillDetailPage() {
                           <Button
                             onClick={handleProposeExchange}
                             disabled={!user || enrollmentLoading}
-                            className="w-full bg-gradient-to-r cursor-pointer
- from-blue-600 to-indigo-600 hover:from-blue-700
-  hover:to-indigo-700 text-white font-semibold py-3 text-lg shadow-lg hover:shadow-xl transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                            className="w-full bg-gradient-to-r cursor-pointer from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-semibold py-3 text-lg shadow-lg hover:shadow-xl transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                             size="lg"
                           >
                             {enrollmentLoading ? (
@@ -1064,7 +1069,6 @@ export default function SkillDetailPage() {
                 </CardContent>
               </Card>
 
-              {/* Instructor Card */}
               <Card className="bg-white/80 backdrop-blur-sm border-0 shadow-lg">
                 <CardHeader>
                   <CardTitle className="flex items-center text-lg">
@@ -1080,7 +1084,6 @@ export default function SkillDetailPage() {
                     <h3 className="font-bold text-lg text-gray-900">{skill.instructor}</h3>
                     <p className="text-gray-600 text-sm">Skill Expert</p>
 
-                    {/* Display instructor email in sidebar */}
                     {skill.email && (
                       <div className="flex items-center justify-center mt-2 text-gray-600">
                         <Mail className="h-4 w-4 mr-2" />
@@ -1109,6 +1112,14 @@ export default function SkillDetailPage() {
           </div>
         </div>
       </div>
+
+      {/* Video Modal */}
+      <VideoModal
+        videoUrl={`${API_BASE_URL.replace('/api', '')}${skill?.introVideoUrl}`}
+        isOpen={isVideoModalOpen}
+        onClose={() => setIsVideoModalOpen(false)}
+      />
+
     </div>
   );
 }

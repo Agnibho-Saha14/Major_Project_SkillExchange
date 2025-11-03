@@ -34,7 +34,7 @@ function Toast({ message, type, onClose }) {
 
 export default function PublishSkillPage() {
   const navigate = useNavigate()
-  const { isSignedIn, isLoaded , user} = useUser()
+  const { isSignedIn, isLoaded, user } = useUser()
   const { getToken } = useAuth()
 
   // ✅ Redirect logic moved to useEffect
@@ -43,12 +43,12 @@ export default function PublishSkillPage() {
       navigate("/signup");
     }
   }, [isLoaded, isSignedIn, navigate]);
- 
+
   useEffect(() => {
-  if (user) {
-    setForm(prev => ({
-      ...prev,
-      instructor: `${user.firstName ?? ""}${user.lastName ? " " + user.lastName : ""}`
+    if (user) {
+      setForm(prev => ({
+        ...prev,
+        instructor: `${user.firstName ?? ""}${user.lastName ? " " + user.lastName : ""}`
       }));
     }
   }, [user]);
@@ -73,11 +73,13 @@ export default function PublishSkillPage() {
       inPersonSessions: false,
       flexibleSchedule: false,
       provideMaterials: false
-    }
+    },
+    introVideoFile: null
   })
 
   const [skillInput, setSkillInput] = useState("")
   const [certificatePreview, setCertificatePreview] = useState(null);
+  const [videoPreview, setVideoPreview] = useState(null);
   const [isLoading, setIsLoading] = useState(false)
   const [isDraftLoading, setIsDraftLoading] = useState(false)
 
@@ -135,6 +137,32 @@ export default function PublishSkillPage() {
     }
   };
 
+  const handleVideoChange = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      // Check file size (max 50MB for video)
+      if (file.size > 50 * 1024 * 1024) {
+        showToast('Video size must be less than 50MB', 'error');
+        return;
+      }
+
+      // Check if it's a video file
+      if (!file.type.startsWith('video/')) {
+        showToast('Please upload a valid video file', 'error');
+        return;
+      }
+
+      setForm({ ...form, introVideoFile: file });
+
+      // Create preview
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setVideoPreview(reader.result);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
   // API call function
   const submitSkill = async (endpoint, successMessage, setLoadingState) => {
     setLoadingState(true);
@@ -146,8 +174,9 @@ export default function PublishSkillPage() {
         status: endpoint.includes('draft') ? 'draft' : 'published'
       };
 
-      // Remove certificate file before stringifying
+      // Remove files before stringifying
       delete skillData.certificateFile;
+      delete skillData.introVideoFile;
 
       if (form.paymentOptions === 'paid' || form.paymentOptions === 'both') {
         skillData.price = form.price ? parseFloat(form.price) : 0;
@@ -161,12 +190,16 @@ export default function PublishSkillPage() {
         formData.append('certificate', form.certificateFile);
       }
 
+      if (form.introVideoFile) {
+        formData.append('introVideo', form.introVideoFile);
+      }
+
       const token = await getToken();
 
       const response = await fetch(`${API_BASE_URL}${endpoint}`, {
         method: 'POST',
         headers: {
-          'Authorization': `Bearer ${token}` // Let browser handle FormData content-type
+          'Authorization': `Bearer ${token}`
         },
         body: formData,
       });
@@ -199,9 +232,11 @@ export default function PublishSkillPage() {
               flexibleSchedule: false,
               provideMaterials: false
             },
-            certificateFile: null
+            certificateFile: null,
+            introVideoFile: null
           });
           setSkillInput("");
+          setVideoPreview(null);
         }
       } else {
         console.error('Backend error:', result);
@@ -309,7 +344,7 @@ export default function PublishSkillPage() {
                     <Label className="text-lg font-semibold text-gray-700">Instructor Name *</Label>
                     <Input
                       name="instructor"
-                       value={`${user.firstName ?? ""}${user.lastName ? " " + user.lastName : ""}`}
+                      value={`${user.firstName ?? ""}${user.lastName ? " " + user.lastName : ""}`}
                       onChange={handleChange}
                       required
                       className="h-12 text-base rounded-xl border-2 border-gray-200 focus:border-indigo-500 transition-colors"
@@ -451,6 +486,75 @@ export default function PublishSkillPage() {
                   </div>
                 </div>
               </div>
+
+              {/* Course Introduction Video Section */}
+              <div className="p-6 border-2 border-gray-200 rounded-2xl bg-gradient-to-r from-purple-50 to-pink-50">
+                <Label className="text-xl font-bold text-gray-800 mb-4 block">
+                  Course Introduction Video
+                </Label>
+                <p className="text-sm text-gray-600 mb-4">
+                  Upload a short video introducing your course (Max 50MB, MP4/WebM/MOV format)
+                </p>
+
+                <div className="space-y-4">
+                  <div className="space-y-2">
+                    <Label className="text-lg font-semibold text-gray-700">
+                      Upload Video
+                    </Label>
+                    <div className="flex items-center justify-center w-full">
+                      <label className="flex flex-col items-center justify-center w-full h-32 border-2 border-purple-300 border-dashed rounded-xl cursor-pointer bg-white hover:bg-purple-50 transition-colors">
+                        <div className="flex flex-col items-center justify-center pt-5 pb-6">
+                          <BookOpen className="w-10 h-10 mb-3 text-purple-500" />
+                          <p className="mb-2 text-sm text-gray-500">
+                            <span className="font-semibold">Click to upload</span> or drag and drop
+                          </p>
+                          <p className="text-xs text-gray-500">MP4, WebM, or MOV (MAX. 50MB)</p>
+                        </div>
+                        <input
+                          type="file"
+                          className="hidden"
+                          accept="video/mp4,video/webm,video/quicktime"
+                          onChange={handleVideoChange}
+                        />
+                      </label>
+                    </div>
+
+                    {/* Video Preview */}
+                    {form.introVideoFile && (
+                      <div className="mt-3 p-3 bg-white rounded-xl border-2 border-purple-200">
+                        <div className="flex items-center justify-between mb-3">
+                          <div className="flex items-center space-x-3">
+                            <CheckCircle className="h-5 w-5 text-green-500" />
+                            <span className="text-sm font-medium text-gray-700">
+                              {form.introVideoFile.name}
+                            </span>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setForm({ ...form, introVideoFile: null });
+                              setVideoPreview(null);
+                            }}
+                            className="text-red-500 hover:text-red-700"
+                          >
+                            <X className="h-5 w-5" />
+                          </button>
+                        </div>
+                        {videoPreview && (
+                          <video
+                            src={videoPreview}
+                            controls
+                            className="w-full max-h-64 rounded-lg"
+                          >
+                            Your browser does not support the video tag.
+                          </video>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+
               {/* Payment Options Section */}
               <div className="p-6 border-2 border-gray-200 rounded-2xl bg-gradient-to-r from-gray-50 to-indigo-50">
                 <Label className="text-xl font-bold text-gray-800 mb-4 block">Payment & Exchange Options</Label>
