@@ -2,11 +2,18 @@ const express = require('express');
 const path = require('path');
 const cors = require('cors');
 const { clerkMiddleware } = require('@clerk/express'); // 👈 import Clerk middleware
+const skillRoutes = require('./routes/skillRoutes');
+const enrollmentRoutes = require('./routes/enrollmentRoutes');
+const paymentRoutes = require('./routes/paymentRoutes');
+const categoryRoutes = require('./routes/categoryRoutes');
+const healthRoutes = require('./routes/healthRoutes');
+const exchangeRoutes = require('./routes/exchangeRoutes');
 
 const app = express();
 
 // ⭐ Apply Clerk middleware FIRST
-app.use(clerkMiddleware()); // 👈 must be before routes using getAuth()
+// 👈 must be before routes using getAuth()
+
 
 // CORS configuration
 app.use(cors({
@@ -18,6 +25,15 @@ app.use(cors({
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
+app.use(clerkMiddleware()); 
+
+app.use('/api/skills', skillRoutes);
+app.use('/api/enrollments', enrollmentRoutes);
+app.use('/api', paymentRoutes);
+app.use('/api/categories', categoryRoutes);
+app.use('/api/health', healthRoutes);
+app.use('/api/exchange', exchangeRoutes);
+
 // ⭐ Serve static files from uploads directory
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
@@ -28,15 +44,11 @@ app.use('/uploads', (req, res, next) => {
 });
 
 // Import routes
-const skillRoutes = require('./routes/skillRoutes');
-const enrollmentRoutes = require('./routes/enrollmentRoutes');
-const paymentRoutes = require('./routes/paymentRoutes');
+
 // ... other routes
 
 // Use routes (after clerkMiddleware)
-app.use('/api/skills', skillRoutes);
-app.use('/api/enrollments', enrollmentRoutes);
-app.use('/api', paymentRoutes);
+
 // ... other routes
 
 // Error handling middleware
