@@ -30,11 +30,13 @@ app.use('/uploads', (req, res, next) => {
 // Import routes
 const skillRoutes = require('./routes/skillRoutes');
 const enrollmentRoutes = require('./routes/enrollmentRoutes');
+const paymentRoutes = require('./routes/paymentRoutes');
 // ... other routes
 
 // Use routes (after clerkMiddleware)
 app.use('/api/skills', skillRoutes);
 app.use('/api/enrollments', enrollmentRoutes);
+app.use('/api', paymentRoutes);
 // ... other routes
 
 // Error handling middleware
