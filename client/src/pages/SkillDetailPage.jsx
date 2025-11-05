@@ -535,129 +535,136 @@ export default function SkillDetailPage() {
   const [isEnrolled, setIsEnrolled] = useState(false);
   const [enrollmentLoading, setEnrollmentLoading] = useState(false);
 
-  const isOwnSkill = userLoaded && user && skill &&
-    (user.emailAddresses[0]?.emailAddress === skill.email ||
-      user.emailAddresses.some(email => email.emailAddress === skill.email));
+// Inside export default function SkillDetailPage() { ... }
 
-  // **FIX:** Wrap in useCallback and add skillId dependency
-  const fetchSkillDetails = useCallback(async () => {
-    if (!skillId) return; // Don't fetch if no skillId
+// ... other state definitions
 
-    setLoading(true);
-    setError('');
+const isOwnSkill = userLoaded && user && skill &&
+  (user.emailAddresses[0]?.emailAddress === skill.email ||
+    user.emailAddresses.some(email => email.emailAddress === skill.email));
 
-    try {
-      const response = await fetch(`${API_BASE_URL}/skills/${skillId}`);
-      const result = await response.json();
+// Wrapped fetching logic in useCallback
+const fetchSkillDetails = useCallback(async () => {
+  if (!skillId) return;
 
-      if (result.success) {
-        setSkill(result.data);
-      } else {
-        setError(result.message || 'Skill not found');
-      }
-    } catch (err) {
-      console.error('Error fetching skill details:', err);
-      setError('Failed to load skill details. Please try again.');
-    } finally {
-      setLoading(false);
+  setLoading(true);
+  setError('');
+
+  try {
+    const response = await fetch(`${API_BASE_URL}/skills/${skillId}`);
+    const result = await response.json();
+
+    if (result.success) {
+      setSkill(result.data);
+    } else {
+      setError(result.message || 'Skill not found');
     }
-  }, [skillId]); // Dependency: skillId
+  } catch (err) {
+    console.error('Error fetching skill details:', err);
+    setError('Failed to load skill details. Please try again.');
+  } finally {
+    setLoading(false);
+  }
+}, [skillId]);
 
-  // **FIX:** Wrap in useCallback and add all dependencies
-  const checkEnrollmentStatus = useCallback(async () => {
-    if (!userLoaded || !user || !skillId) {
+// Wrapped enrollment check logic in useCallback
+const checkEnrollmentStatus = useCallback(async () => {
+  if (!userLoaded || !user || !skillId) {
+    setIsEnrolled(false);
+    setCompletedModules([]);
+    setProgressPercentage(0);
+    return;
+  }
+
+  setEnrollmentLoading(true);
+
+  try {
+    const token = await getToken();
+    const response = await fetch(`${API_BASE_URL}/enrollments/check/${skillId}`, {
+      headers: {
+        'Authorization': `Bearer ${token}`
+      }
+    });
+
+    const result = await response.json();
+
+    if (response.ok && result.success) {
+      setIsEnrolled(result.data.isEnrolled);
+      if (result.data.isEnrolled) {
+          setCompletedModules(result.data.completedModules || []);
+          setProgressPercentage(result.data.progressPercentage || 0);
+      } else {
+          setCompletedModules([]);
+          setProgressPercentage(0);
+      }
+    } else {
       setIsEnrolled(false);
       setCompletedModules([]);
       setProgressPercentage(0);
-      return;
     }
+  } catch (err) {
+    console.error('Error checking enrollment status:', err);
+    setIsEnrolled(false);
+  } finally {
+    setEnrollmentLoading(false);
+  }
+}, [userLoaded, user, skillId, getToken]); // Dependencies
 
-    setEnrollmentLoading(true);
-
-    try {
-      const token = await getToken();
-      const response = await fetch(`${API_BASE_URL}/enrollments/check/${skillId}`, {
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
-      });
-
-      const result = await response.json();
-
-      if (response.ok && result.success) {
-        setIsEnrolled(result.data.isEnrolled);
-        if (result.data.isEnrolled) {
-          setCompletedModules(result.data.completedModules || []);
-          setProgressPercentage(result.data.progressPercentage || 0);
-        } else {
-          setCompletedModules([]);
-          setProgressPercentage(0);
-        }
-      } else {
-        setIsEnrolled(false);
-        setCompletedModules([]);
-        setProgressPercentage(0);
-      }
-    } catch (err) {
-      console.error('Error checking enrollment status:', err);
-      setIsEnrolled(false);
-    } finally {
-      setEnrollmentLoading(false);
-    }
-  }, [userLoaded, user, skillId, getToken]); // Dependencies
-
-  const handleCompleteModule = useCallback(async (moduleId, moduleTitle) => {
-    if (!isEnrolled) return;
-
-    if (completedModules.includes(moduleId) || enrollmentLoading) {
+const handleCompleteModule = useCallback(async (moduleId, moduleTitle) => {
+  if (!isEnrolled || isOwnSkill) return; // Prevent creator from using button
+  
+  // Note: We use the state directly here because dependency checking ensures we only run if the state is current enough.
+  if (completedModules.includes(moduleId) || enrollmentLoading) {
       alert(`Module "${moduleTitle}" is already marked as complete.`);
       return;
-    }
+  }
 
-    // Optimistic UI update
-    setCompletedModules(prev => [...prev, moduleId]);
+  // Optimistic UI update
+  setCompletedModules(prev => [...prev, moduleId]);
 
-    try {
+  try {
       const token = await getToken();
       const response = await fetch(`${API_BASE_URL}/enrollments/complete-module/${skillId}`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify({ moduleId })
+          method: 'POST',
+          headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${token}`
+          },
+          body: JSON.stringify({ moduleId })
       });
-
+      
       const result = await response.json();
 
       if (result.success) {
-        // Update state with confirmed data
-        setCompletedModules(result.data.completedModules);
-        setProgressPercentage(result.data.progressPercentage);
+          setCompletedModules(result.data.completedModules);
+          setProgressPercentage(result.data.progressPercentage);
       } else {
-        // Revert optimistic update on failure
-        setCompletedModules(prev => prev.filter(id => id !== moduleId));
-        alert(`Failed to mark module as complete: ${result.message}`);
+          // Revert optimistic update on failure
+          setCompletedModules(prev => prev.filter(id => id !== moduleId));
+          alert(`Failed to mark module as complete: ${result.message}`);
       }
-    } catch (error) {
+  } catch (error) {
       console.error("Error marking module complete:", error);
       // Revert optimistic update on failure
       setCompletedModules(prev => prev.filter(id => id !== moduleId));
       alert("An unexpected error occurred. Could not mark module as complete.");
-    }
-  }, [isEnrolled, skillId, getToken, enrollmentLoading]); // **FIX:** Removed completedModules dependency
+  }
+}, [isEnrolled, isOwnSkill, skillId, getToken, enrollmentLoading, completedModules]); // IMPORTANT: completedModules is a dependency because we read it.
 
+// ... rest of the component // **FIX:** Removed completedModules dependency
+
+// Fetch skill details when skillId changes
   useEffect(() => {
     if (skillId) {
       fetchSkillDetails();
     }
-  }, [skillId, fetchSkillDetails]); // **FIX:** Add fetchSkillDetails to dependencies
+  }, [skillId, fetchSkillDetails]);
 
+  // Check enrollment status when dependencies change
   useEffect(() => {
     if (userLoaded && skillId && skill) {
-      checkEnrollmentStatus();
+        checkEnrollmentStatus();
     }
-    // **FIX:** Add skill and checkEnrollmentStatus to dependencies
   }, [userLoaded, user, skillId, skill, checkEnrollmentStatus]);
 
   const handleRatingUpdate = (updatedSkill) => {
