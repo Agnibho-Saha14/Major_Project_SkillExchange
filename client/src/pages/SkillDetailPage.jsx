@@ -1,7 +1,8 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
+import { Tabs, TabsList, TabsContent, TabsTrigger } from "@/components/ui/tabs";
 import { loadStripe } from '@stripe/stripe-js';
 import { useUser, useAuth } from '@clerk/clerk-react';
 
@@ -22,13 +23,20 @@ import {
   Mail,
   Shield,
   Maximize2,
-  X
+  X,
+  ChevronDown,
+  PlayCircle,
+  Plus
 } from "lucide-react";
-import { Link, useNavigate } from "react-router-dom";
+// Import useParams to get URL parameters
+import { Link, useNavigate, useParams } from "react-router-dom";
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
 
-/* ---------- VideoModal Component ---------- */
+/* -------------------------------------- */
+/* ---------- Helper Components --------- */
+/* -------------------------------------- */
+
 function VideoModal({ videoUrl, isOpen, onClose }) {
   if (!isOpen) return null;
 
@@ -58,7 +66,6 @@ function VideoModal({ videoUrl, isOpen, onClose }) {
 }
 
 
-/* ---------- StarRating (No Change) ---------- */
 function StarRating({ rating = 0, size = "md", showNumber = true }) {
   const stars = [];
   const fullStars = Math.floor(rating);
@@ -99,7 +106,6 @@ function StarRating({ rating = 0, size = "md", showNumber = true }) {
   );
 }
 
-/* ---------- InteractiveStarRating ---------- */
 function InteractiveStarRating({ rating, onRatingChange, size = "lg" }) {
   const [hoverRating, setHoverRating] = useState(0);
 
@@ -140,7 +146,6 @@ function InteractiveStarRating({ rating, onRatingChange, size = "lg" }) {
   );
 }
 
-/* ---------- RatingSection ---------- */
 function RatingSection({ skillId, averageRating, totalRatings, onRatingUpdate, isOwnSkill, isEnrolled }) {
   const { getToken } = useAuth();
   const { user, isLoaded } = useUser();
@@ -237,6 +242,7 @@ function RatingSection({ skillId, averageRating, totalRatings, onRatingUpdate, i
     }
 
     const avgRating = calculateAverageRating();
+    const formattedComment = formatParameterRatings(avgRating);
 
     setIsSubmitting(true);
     try {
@@ -249,7 +255,7 @@ function RatingSection({ skillId, averageRating, totalRatings, onRatingUpdate, i
         },
         body: JSON.stringify({
           rating: avgRating,
-          comment: formatParameterRatings(avgRating),
+          comment: formattedComment, // Send formatted comment
         }),
       });
 
@@ -259,7 +265,7 @@ function RatingSection({ skillId, averageRating, totalRatings, onRatingUpdate, i
         setHasRated(true);
         setExistingRating({
           rating: avgRating,
-          comment: userComment.trim(),
+          comment: formattedComment, // **FIX:** Use formatted comment for optimistic update
           createdAt: new Date()
         });
         setParameterRatings(initialParameterRatings);
@@ -441,19 +447,87 @@ function RatingSection({ skillId, averageRating, totalRatings, onRatingUpdate, i
   );
 }
 
-/* ---------- SkillDetailPage ---------- */
+/* -------------------------------------- */
+/* --- PROGRESS & PLACEHOLDERS --- */
+/* -------------------------------------- */
+
+const CourseProgress = ({ percentage, totalModules, completedModulesCount }) => {
+  const progress = Math.min(100, Math.max(0, percentage));
+
+  return (
+    <div className="space-y-2 mb-4 p-4 bg-indigo-50 rounded-lg border border-indigo-200">
+      <div className="flex justify-between items-center text-sm font-medium text-indigo-700">
+        <span>Course Progress</span>
+        <span>{completedModulesCount}/{totalModules} Modules Complete</span>
+      </div>
+      <div className="w-full bg-gray-200 rounded-full h-2.5">
+        <div
+          className="bg-indigo-600 h-2.5 rounded-full transition-all duration-500"
+          style={{ width: `${progress}%` }}
+        ></div>
+      </div>
+      <p className="text-right text-xs font-semibold text-indigo-800">{progress}% Complete</p>
+    </div>
+  );
+};
+
+const PlaceholderLine = ({ width = 'w-full', height = 'h-4' }) => (
+  <div className={`bg-gray-200 rounded animate-pulse ${width} ${height}`}></div>
+);
+
+const CourseContentPlaceholder = () => {
+  return (
+    <div className="space-y-4">
+      <div className="border border-gray-200 rounded-lg shadow-sm overflow-hidden">
+        <div className="flex items-center p-4 bg-gray-50">
+          <ChevronDown className="w-5 h-5 text-gray-400 mr-4" />
+          <PlaceholderLine width="w-1/3" height="h-5" />
+        </div>
+        <div className="p-4 space-y-2 bg-white border-t">
+          <div className="flex items-center space-x-3 p-2 border-l-2 border-transparent">
+            <PlayCircle className="w-5 h-5 text-gray-400" />
+            <PlaceholderLine width="w-3/4" />
+            <PlaceholderLine width="w-1/6" />
+          </div>
+        </div>
+      </div>
+
+      <div className="border border-gray-200 rounded-lg shadow-sm">
+        <div className="flex items-center p-4 bg-gray-50">
+          <ChevronDown className="w-5 h-5 text-gray-400 mr-4" />
+          <PlaceholderLine width="w-1/4" height="h-5" />
+        </div>
+      </div>
+    </div>
+  );
+};
+
+
+/* -------------------------------------- */
+/* ---------- SkillDetailPage ----------- */
+/* -------------------------------------- */
+
 export default function SkillDetailPage() {
   const { user, isLoaded: userLoaded } = useUser();
   const { getToken } = useAuth();
   const navigate = useNavigate();
+  // **FIX:** Get id from URL params
+  const { id } = useParams();
   const [skillId, setSkillId] = useState('');
   const [isVideoModalOpen, setIsVideoModalOpen] = useState(false);
+  // **FIX:** Add state for the modal's video URL
+  const [modalVideoUrl, setModalVideoUrl] = useState('');
+  const [activeModuleId, setActiveModuleId] = useState(null);
+
+  const [completedModules, setCompletedModules] = useState([]);
+  const [progressPercentage, setProgressPercentage] = useState(0);
 
   useEffect(() => {
-    const parts = window.location.pathname.split('/');
-    const id = parts.pop() || parts.pop();
-    setSkillId(id);
-  }, []);
+    // **FIX:** Set skillId from URL params
+    if (id) {
+      setSkillId(id);
+    }
+  }, [id]);
 
   const [skill, setSkill] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -465,7 +539,10 @@ export default function SkillDetailPage() {
     (user.emailAddresses[0]?.emailAddress === skill.email ||
       user.emailAddresses.some(email => email.emailAddress === skill.email));
 
-  const fetchSkillDetails = async () => {
+  // **FIX:** Wrap in useCallback and add skillId dependency
+  const fetchSkillDetails = useCallback(async () => {
+    if (!skillId) return; // Don't fetch if no skillId
+
     setLoading(true);
     setError('');
 
@@ -484,11 +561,14 @@ export default function SkillDetailPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [skillId]); // Dependency: skillId
 
-  const checkEnrollmentStatus = async () => {
+  // **FIX:** Wrap in useCallback and add all dependencies
+  const checkEnrollmentStatus = useCallback(async () => {
     if (!userLoaded || !user || !skillId) {
       setIsEnrolled(false);
+      setCompletedModules([]);
+      setProgressPercentage(0);
       return;
     }
 
@@ -506,8 +586,17 @@ export default function SkillDetailPage() {
 
       if (response.ok && result.success) {
         setIsEnrolled(result.data.isEnrolled);
+        if (result.data.isEnrolled) {
+          setCompletedModules(result.data.completedModules || []);
+          setProgressPercentage(result.data.progressPercentage || 0);
+        } else {
+          setCompletedModules([]);
+          setProgressPercentage(0);
+        }
       } else {
         setIsEnrolled(false);
+        setCompletedModules([]);
+        setProgressPercentage(0);
       }
     } catch (err) {
       console.error('Error checking enrollment status:', err);
@@ -515,21 +604,90 @@ export default function SkillDetailPage() {
     } finally {
       setEnrollmentLoading(false);
     }
-  };
+  }, [userLoaded, user, skillId, getToken]); // Dependencies
+
+  const handleCompleteModule = useCallback(async (moduleId, moduleTitle) => {
+    if (!isEnrolled) return;
+
+    if (completedModules.includes(moduleId) || enrollmentLoading) {
+      alert(`Module "${moduleTitle}" is already marked as complete.`);
+      return;
+    }
+
+    // Optimistic UI update
+    setCompletedModules(prev => [...prev, moduleId]);
+
+    try {
+      const token = await getToken();
+      const response = await fetch(`${API_BASE_URL}/enrollments/complete-module/${skillId}`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({ moduleId })
+      });
+
+      const result = await response.json();
+
+      if (result.success) {
+        // Update state with confirmed data
+        setCompletedModules(result.data.completedModules);
+        setProgressPercentage(result.data.progressPercentage);
+      } else {
+        // Revert optimistic update on failure
+        setCompletedModules(prev => prev.filter(id => id !== moduleId));
+        alert(`Failed to mark module as complete: ${result.message}`);
+      }
+    } catch (error) {
+      console.error("Error marking module complete:", error);
+      // Revert optimistic update on failure
+      setCompletedModules(prev => prev.filter(id => id !== moduleId));
+      alert("An unexpected error occurred. Could not mark module as complete.");
+    }
+  }, [isEnrolled, skillId, getToken, enrollmentLoading]); // **FIX:** Removed completedModules dependency
 
   useEffect(() => {
     if (skillId) {
       fetchSkillDetails();
     }
-  }, [skillId]);
+  }, [skillId, fetchSkillDetails]); // **FIX:** Add fetchSkillDetails to dependencies
 
   useEffect(() => {
-    checkEnrollmentStatus();
-  }, [userLoaded, user, skillId, getToken]);
+    if (userLoaded && skillId && skill) {
+      checkEnrollmentStatus();
+    }
+    // **FIX:** Add skill and checkEnrollmentStatus to dependencies
+  }, [userLoaded, user, skillId, skill, checkEnrollmentStatus]);
 
   const handleRatingUpdate = (updatedSkill) => {
     setSkill(prev => ({ ...prev, ...updatedSkill }));
   };
+
+  const handleToggleModule = (moduleId) => {
+    setActiveModuleId(prevId => (prevId === moduleId ? null : moduleId));
+  };
+
+  const handleAddModule = () => {
+    alert("[Action Placeholder]: Opening form to add a new module.");
+  };
+
+  const handleAddVideo = (moduleTitle) => {
+    alert(`[Action Placeholder]: Opening form to add video to Module: ${moduleTitle}`);
+  };
+
+  // **FIX: Critical Bug** - Implement video playback
+  const handlePlayVideo = (videoTitle, videoUrl) => {
+    if (!videoUrl) {
+      alert("Video URL is missing.");
+      return;
+    }
+    // Set the full URL for the modal
+    setModalVideoUrl(`${API_BASE_URL.replace('/api', '')}${videoUrl}`);
+    // Open the modal
+    setIsVideoModalOpen(true);
+  };
+
 
   const formatPrice = (price, paymentOptions) => {
     if (paymentOptions === 'exchange') {
@@ -711,6 +869,15 @@ export default function SkillDetailPage() {
     );
   }
 
+  const isModuleContentVisible = isEnrolled || isOwnSkill;
+
+  const modulesToDisplay = isOwnSkill || isEnrolled
+    ? skill.modules || []
+    : (skill.modules || []).filter(m => m.videos && m.videos.some(v => v.isFreePreview));
+
+  const sortedModules = modulesToDisplay.sort((a, b) => a.order - b.order);
+
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-white to-purple-50">
       <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
@@ -807,7 +974,8 @@ export default function SkillDetailPage() {
                         Your browser does not support the video tag.
                       </video>
                       <button
-                        onClick={() => setIsVideoModalOpen(true)}
+                        // **FIX:** Use the central video handler
+                        onClick={() => handlePlayVideo(skill.title, skill.introVideoUrl)}
                         className="absolute top-4 right-4 bg-black/50 hover:bg-black/70 text-white p-2 rounded-lg transition-colors opacity-0 group-hover:opacity-100"
                         title="View fullscreen"
                       >
@@ -817,15 +985,213 @@ export default function SkillDetailPage() {
                   </div>
                 )}
 
-                {/* Description */}
-                <div className="mb-6">
-                  <h3 className="text-xl font-bold text-gray-900 mb-3">About This Skill</h3>
-                  <p className="text-gray-700 leading-relaxed">{skill.description}</p>
+                <div className="mt-8">
+                  <Tabs defaultValue="overview">
+                    <TabsList className="grid w-full grid-cols-2 md:grid-cols-4 h-auto">
+                      <TabsTrigger value="overview" className="data-[state=active]:bg-indigo-500 data-[state=active]:text-white">Overview</TabsTrigger>
+                      <TabsTrigger value="content" className="data-[state=active]:bg-indigo-500 data-[state=active]:text-white">Course Content</TabsTrigger>
+                      <TabsTrigger value="prereqs" className="data-[state=active]:bg-indigo-500 data-[state=active]:text-white">Prerequisites</TabsTrigger>
+                      <TabsTrigger value="outcomes" className="data-[state=active]:bg-indigo-500 data-[state=active]:text-white">Outcomes</TabsTrigger>
+                    </TabsList>
+
+                    <TabsContent value="overview" className="mt-4 p-4 bg-gray-50 rounded-lg">
+                      <h3 className="text-xl font-bold text-gray-900 mb-3">About This Skill</h3>
+                      <p className="text-gray-700 leading-relaxed">{skill.description}</p>
+
+                      <div className="mt-6">
+                        <h3 className="text-xl font-bold text-gray-900 mb-3">Teaching Format</h3>
+                        <div className="grid grid-cols-2 gap-3">
+                          {skill.teachingFormat?.onlineSessions && (
+                            <div className="flex items-center p-3 bg-green-50 border border-green-200 rounded-lg">
+                              <CheckCircle className="h-5 w-5 text-green-600 mr-2" />
+                              <span className="text-green-800 font-medium">Online Sessions</span>
+                            </div>
+                          )}
+                          {skill.teachingFormat?.inPersonSessions && (
+                            <div className="flex items-center p-3 bg-green-50 border border-green-200 rounded-lg">
+                              <CheckCircle className="h-5 w-5 text-green-600 mr-2" />
+                              <span className="text-green-800 font-medium">In-Person Sessions</span>
+                            </div>
+                          )}
+                          {skill.teachingFormat?.flexibleSchedule && (
+                            <div className="flex items-center p-3 bg-green-50 border border-green-200 rounded-lg">
+                              <CheckCircle className="h-5 w-5 text-green-600 mr-2" />
+                              <span className="text-green-800 font-medium">Flexible Schedule</span>
+                            </div>
+                          )}
+                          {skill.teachingFormat?.provideMaterials && (
+                            <div className="flex items-center p-3 bg-green-50 border border-green-200 rounded-lg">
+                              <CheckCircle className="h-5 w-5 text-green-600 mr-2" />
+                              <span className="text-green-800 font-medium">Materials Provided</span>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    </TabsContent>
+
+                    <TabsContent value="content" className="mt-4 p-4 bg-white rounded-lg border">
+                      <h2 className="text-2xl font-bold mb-4 flex items-center">
+                        <BookOpen className="w-6 h-6 mr-2 text-indigo-600" />
+                        Course Contents
+                      </h2>
+
+                      {/* Display Progress Bar for Enrolled Users/Owner */}
+                      {(isEnrolled || isOwnSkill) && (
+                        <CourseProgress
+                          percentage={progressPercentage}
+                          totalModules={skill.modules?.length || 0}
+                          completedModulesCount={completedModules.length}
+                        />
+                      )}
+
+                      {/* Add Module Button (Visible only to the Owner) */}
+                      {isOwnSkill && (
+                        <div className="flex justify-end mb-4">
+                          <Button
+                            onClick={handleAddModule}
+                            className="bg-green-600 hover:bg-green-700 flex items-center"
+                          >
+                            <Plus className="w-5 h-5 mr-2" />
+                            Add New Module
+                          </Button>
+                        </div>
+                      )}
+
+                      {loading || enrollmentLoading ? (
+                        <CourseContentPlaceholder />
+                      ) : sortedModules.length > 0 ? (
+                        <div className="space-y-4">
+                          {sortedModules.map((module) => {
+                            const moduleId = module._id;
+                            const isCompleted = completedModules.includes(moduleId);
+                            const isModuleOpen = activeModuleId === moduleId || isOwnSkill;
+
+                            return (
+                              <div
+                                key={moduleId}
+                                className={`border rounded-lg overflow-hidden ${isCompleted && isEnrolled ? 'border-green-400' : 'border-gray-200'}`}
+                              >
+                                {/* Module Header */}
+                                <div
+                                  className={`flex justify-between items-center p-4 transition-colors cursor-pointer ${isCompleted && isEnrolled ? 'bg-green-50 hover:bg-green-100' : 'bg-gray-50 hover:bg-gray-100'}`}
+                                  onClick={() => handleToggleModule(moduleId)}
+                                >
+                                  <div className="flex items-center space-x-4">
+                                    <ChevronDown className={`w-5 h-5 text-gray-600 transition-transform ${isModuleOpen ? 'rotate-180' : 'rotate-0'}`} />
+                                    <h3 className={`font-semibold text-lg ${isCompleted && isEnrolled ? 'text-green-800' : 'text-gray-900'}`}>
+                                      Module {module.order}: {module.title}
+                                    </h3>
+                                  </div>
+                                  {isOwnSkill && (
+                                    <Button
+                                      variant="ghost"
+                                      size="sm"
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        handleAddVideo(module.title);
+                                      }}
+                                      className="flex items-center text-indigo-600 hover:text-indigo-700 p-1"
+                                    >
+                                      <Plus className="w-4 h-4 mr-1" />
+                                      Add Video
+                                    </Button>
+                                  )}
+                                </div>
+
+                                {/* Module Content (Visible if open) */}
+                                {isModuleOpen && (
+                                  <div className="p-4 bg-white border-t border-gray-200">
+                                    {module.description && (
+                                      <p className="text-sm text-gray-700 mb-4">{module.description}</p>
+                                    )}
+
+                                    {module.videos && module.videos.length > 0 ? (
+                                      <div className="space-y-2">
+                                        {module.videos.sort((a, b) => a.order - b.order).map((video) => (
+                                          <div
+                                            key={video._id}
+                                            className={`flex items-center space-x-3 p-3 rounded-lg transition-colors border-l-4 ${isModuleContentVisible || video.isFreePreview
+                                                ? 'hover:bg-indigo-50 cursor-pointer border-indigo-500'
+                                                : 'opacity-60 cursor-not-allowed border-gray-300'
+                                              }`}
+                                            onClick={() => {
+                                              if (isModuleContentVisible || video.isFreePreview) {
+                                                handlePlayVideo(video.title, video.videoUrl);
+                                              }
+                                            }}
+                                            title={!isModuleContentVisible && !video.isFreePreview ? "Enroll to view this video" : video.title}
+                                          >
+                                            <PlayCircle className={`w-5 h-5 ${isModuleContentVisible || video.isFreePreview ? 'text-indigo-600' : 'text-gray-400'}`} />
+                                            <span className={`flex-1 text-sm ${isModuleContentVisible || video.isFreePreview ? 'text-gray-800 font-medium' : 'text-gray-500'}`}>
+                                              {video.title}
+                                              {video.isFreePreview && <span className="ml-2 px-2 py-0.5 bg-green-100 text-green-700 text-xs rounded-full">Free Preview</span>}
+                                            </span>
+                                            <span className="text-xs text-gray-500">{video.duration}</span>
+                                          </div>
+                                        ))}
+                                      </div>
+                                    ) : (
+                                      <p className="text-sm text-gray-500 p-2">No videos added to this module yet.</p>
+                                    )}
+
+                                  </div>
+                                )}
+
+                                {/* Completion Button (Visible only to Enrolled Users, not Owner) */}
+                                {isEnrolled && !isOwnSkill && isModuleOpen && ( // Only show when module is open
+                                  <div className="p-3 bg-gray-100 border-t border-gray-200 flex justify-end">
+                                    <Button
+                                      onClick={() => handleCompleteModule(moduleId, module.title)}
+                                      disabled={isCompleted}
+                                      className={`flex items-center transition-all ${isCompleted ? 'bg-green-500 hover:bg-green-600' : 'bg-indigo-600 hover:bg-indigo-700'}`}
+                                    >
+                                      {isCompleted ? (
+                                        <><CheckCircle className="w-4 h-4 mr-2" /> Completed</>
+                                      ) : (
+                                        <><CheckCircle className="w-4 h-4 mr-2" /> Mark as Complete</>
+                                      )}
+                                    </Button>
+                                  </div>
+                                )}
+
+                                {/* Enrollment CTA for non-owners/non-enrolled */}
+                                {!isEnrolled && !isOwnSkill && (
+                                  <div className="p-3 bg-red-50 text-red-700 text-sm text-center border-t border-red-200">
+                                    Enroll to unlock the rest of this module's content.
+                                  </div>
+                                )}
+                              </div>
+                            )
+                          })}
+                        </div>
+                      ) : (
+                        <div className="p-6 text-center bg-gray-50 rounded-lg border border-dashed border-gray-300">
+                          <BookOpen className="w-8 h-8 mx-auto mb-3 text-indigo-500" />
+                          <p className="text-gray-700 font-medium">Unlock 100% of the course content by enrolling!</p>
+                          <p className="text-sm text-gray-500">The full course outline with all modules and videos will appear here upon enrollment.</p>
+                        </div>
+                      )}
+                    </TabsContent>
+
+                    <TabsContent value="prereqs" className="mt-4 p-4 bg-gray-50 rounded-lg">
+                      <h3 className="text-xl font-bold text-gray-900 mb-3">Prerequisites</h3>
+                      <p className="text-gray-700 leading-relaxed">
+                        {skill.prerequisites || "No specific prerequisites listed for this course."}
+                      </p>
+                    </TabsContent>
+
+                    <TabsContent value="outcomes" className="mt-4 p-4 bg-gray-50 rounded-lg">
+                      <h3 className="text-xl font-bold text-gray-900 mb-3">What You'll Learn</h3>
+                      <p className="text-gray-700 leading-relaxed">
+                        {skill.learningOutcomes || "Learning outcomes are not yet specified."}
+                      </p>
+                    </TabsContent>
+                  </Tabs>
                 </div>
 
-                {/* Certificate Verification Section */}
+
                 {skill.credentialId && (
-                  <div className="mb-6">
+                  <div className="my-6">
                     <div className="p-4 bg-gradient-to-r from-green-50 to-emerald-50 border-2 border-green-200 rounded-xl">
                       <div className="flex items-center space-x-3">
                         <CheckCircle className="h-6 w-6 text-green-600 flex-shrink-0" />
@@ -849,54 +1215,6 @@ export default function SkillDetailPage() {
                   </div>
                 )}
 
-                {/* Prerequisites */}
-                {skill.prerequisites && (
-                  <div className="mb-6">
-                    <h3 className="text-xl font-bold text-gray-900 mb-3">Prerequisites</h3>
-                    <p className="text-gray-700 leading-relaxed">{skill.prerequisites}</p>
-                  </div>
-                )}
-
-                {/* Learning Outcomes */}
-                {skill.learningOutcomes && (
-                  <div className="mb-6">
-                    <h3 className="text-xl font-bold text-gray-900 mb-3">What You'll Learn</h3>
-                    <p className="text-gray-700 leading-relaxed">{skill.learningOutcomes}</p>
-                  </div>
-                )}
-
-                {/* Teaching Format */}
-                <div>
-                  <h3 className="text-xl font-bold text-gray-900 mb-3">Teaching Format</h3>
-                  <div className="grid grid-cols-2 gap-3">
-                    {skill.teachingFormat?.onlineSessions && (
-                      <div className="flex items-center p-3 bg-green-50 border border-green-200 rounded-lg">
-                        <CheckCircle className="h-5 w-5 text-green-600 mr-2" />
-                        <span className="text-green-800 font-medium">Online Sessions</span>
-                      </div>
-                    )}
-                    {skill.teachingFormat?.inPersonSessions && (
-                      <div className="flex items-center p-3 bg-green-50 border border-green-200 rounded-lg">
-                        <CheckCircle className="h-5 w-5 text-green-600 mr-2" />
-                        <span className="text-green-800 font-medium">In-Person Sessions</span>
-                      </div>
-                    )}
-                    {skill.teachingFormat?.flexibleSchedule && (
-                      <div className="flex items-center p-3 bg-green-50 border border-green-200 rounded-lg">
-                        <CheckCircle className="h-5 w-5 text-green-600 mr-2" />
-                        <span className="text-green-800 font-medium">Flexible Schedule</span>
-                      </div>
-                    )}
-                    {skill.teachingFormat?.provideMaterials && (
-                      <div className="flex items-center p-3 bg-green-50 border border-green-200 rounded-lg">
-                        <CheckCircle className="h-5 w-5 text-green-600 mr-2" />
-                        <span className="text-green-800 font-medium">Materials Provided</span>
-                      </div>
-                    )}
-                  </div>
-                </div>
-
-                {/* Skills for Exchange */}
                 {skill.paymentOptions !== 'paid' && skill.skills && skill.skills.length > 0 && (
                   <div className="mt-6">
                     <h3 className="text-xl font-bold text-gray-900 mb-3">Skills Wanted in Exchange</h3>
@@ -1113,11 +1431,14 @@ export default function SkillDetailPage() {
         </div>
       </div>
 
-      {/* Video Modal */}
+      {/* **FIX:** Use modalVideoUrl state and clear it on close */}
       <VideoModal
-        videoUrl={`${API_BASE_URL.replace('/api', '')}${skill?.introVideoUrl}`}
+        videoUrl={modalVideoUrl}
         isOpen={isVideoModalOpen}
-        onClose={() => setIsVideoModalOpen(false)}
+        onClose={() => {
+          setIsVideoModalOpen(false);
+          setModalVideoUrl(''); // Clear the URL when closing
+        }}
       />
 
     </div>
