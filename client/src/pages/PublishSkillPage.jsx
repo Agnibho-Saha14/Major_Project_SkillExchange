@@ -9,7 +9,7 @@ import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { Checkbox } from "@/components/ui/checkbox"
-import { BookOpen, Plus, X, CheckCircle, AlertCircle, Loader2 } from "lucide-react"
+import { BookOpen, Plus, X, CheckCircle, AlertCircle, Loader2,BookCopy } from "lucide-react"
 import Navbar from "@/components/Navbar"
 
 
@@ -74,9 +74,11 @@ export default function PublishSkillPage() {
       flexibleSchedule: false,
       provideMaterials: false
     },
-    introVideoFile: null
+    introVideoFile: null,
+    modules: []
   })
 
+  const [currentModule, setCurrentModule] = useState({ title: "", description: "" });
   const [skillInput, setSkillInput] = useState("")
   const [certificatePreview, setCertificatePreview] = useState(null);
   const [videoPreview, setVideoPreview] = useState(null);
@@ -100,6 +102,32 @@ export default function PublishSkillPage() {
       setSkillInput("")
     }
   }
+  const handleAddModule = () => {
+    if (!currentModule.title.trim()) {
+      showToast("Please enter a module title", "error");
+      return;
+    }
+    setForm(prev => ({
+      ...prev,
+      modules: [
+        ...prev.modules,
+        {
+          ...currentModule,
+          order: prev.modules.length + 1,
+           // Initialize with an empty videos array
+        }
+      ]
+    }));
+    setCurrentModule({ title: "", description: "" }); // Reset module input
+  };
+
+  const removeModule = (index) => {
+    setForm(prev => ({
+      ...prev,
+      modules: prev.modules.filter((_, i) => i !== index)
+    }));
+  };
+
 
   const removeSkill = (index) => {
     setForm({ ...form, skills: form.skills.filter((_, i) => i !== index) })
@@ -168,7 +196,7 @@ export default function PublishSkillPage() {
     setLoadingState(true);
     try {
       const formData = new FormData();
-
+            
       const skillData = {
         ...form,
         status: endpoint.includes('draft') ? 'draft' : 'published'
@@ -233,7 +261,8 @@ export default function PublishSkillPage() {
               provideMaterials: false
             },
             certificateFile: null,
-            introVideoFile: null
+            introVideoFile: null,
+            modules: []
           });
           setSkillInput("");
           setVideoPreview(null);
@@ -552,6 +581,67 @@ export default function PublishSkillPage() {
                       </div>
                     )}
                   </div>
+                </div>
+              </div>
+
+
+              
+              {/* --- NEW SECTION: Course Content / Modules --- */}
+              <div className="p-6 border-2 border-gray-200 rounded-2xl bg-gradient-to-r from-teal-50 to-cyan-50">
+                <Label className="text-xl font-bold text-gray-800 mb-4 block">
+                  Course Content
+                </Label>
+                <p className="text-sm text-gray-600 mb-4">
+                  Add the modules you will teach.
+                </p>
+
+                {/* Display Added Modules */}
+                <div className="space-y-4 mb-6">
+                  {form.modules.map((module, modIndex) => (
+                    <Card key={modIndex} className="bg-white p-4 shadow-sm">
+                      <div className="flex justify-between items-center">
+                        <div className="flex items-center">
+                          <BookCopy className="h-5 w-5 mr-3 text-teal-600" />
+                          <h4 className="font-semibold text-lg">{module.order}. {module.title}</h4>
+                        </div>
+                        {/* "Add Video" button is GONE. Only remove button remains. */}
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon"
+                          className="text-red-500 hover:text-red-700"
+                          onClick={() => removeModule(modIndex)}
+                        >
+                          <X className="h-4 w-4" />
+                        </Button>
+                      </div>
+                      <p className="text-sm text-gray-600 pl-8">{module.description}</p>
+                    </Card>
+                  ))}
+                </div>
+
+                {/* Form to Add New Module */}
+                <div className="p-4 bg-white border-2 border-dashed rounded-xl space-y-3">
+                  <h4 className="font-semibold text-lg">Add a New Module</h4>
+                  <Input
+                    placeholder="Module Title (e.g., Module 1: Introduction)"
+                    value={currentModule.title}
+                    onChange={(e) => setCurrentModule(prev => ({ ...prev, title: e.target.value }))}
+                  />
+                  <Textarea
+                    placeholder="Module Description (optional)"
+                    rows={2}
+                    value={currentModule.description}
+                    onChange={(e) => setCurrentModule(prev => ({ ...prev, description: e.target.value }))}
+                  />
+                  <Button
+                    type="button" 
+                    variant="outline"
+                    onClick={handleAddModule}
+                  >
+                    <Plus className="h-4 w-4 mr-2" />
+                    Add Module
+                  </Button>
                 </div>
               </div>
 

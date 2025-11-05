@@ -20,6 +20,13 @@ const teachingFormatSchema = new mongoose.Schema(
   { _id: false }
 );
 
+const moduleSchema = new mongoose.Schema({
+  title: { type: String, required: true },
+  description: { type: String, default: '' },
+  order: { type: Number, default: 0 }, // For ordering modules
+   // Embed the video schema as an array(later)
+});
+
 const skillSchema = new mongoose.Schema(
   {
     ownerId: { type: String, required: false },
@@ -44,7 +51,8 @@ const skillSchema = new mongoose.Schema(
     ratings: [ratingSchema], // Using the ratingSchema defined above
     averageRating: { type: Number, default: 0, min: 0, max: 5 },
     totalRatings: { type: Number, default: 0, min: 0 },
-    email: { type: String, required: false, default: '' }
+    email: { type: String, required: false, default: '' },
+    modules: [moduleSchema]
   },
   { timestamps: true }
 );
