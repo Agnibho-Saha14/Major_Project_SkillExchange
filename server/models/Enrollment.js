@@ -7,6 +7,7 @@ const enrollmentSchema = new mongoose.Schema(
     status: { type: String, enum: ['paid', 'exchange_pending', 'enrolled'], default: 'enrolled' },
     dateEnrolled: { type: Date, default: Date.now },
     transactionId: { type: String },
+    completedModules: { type: [String], default: [] } // NEW FIELD: Array of completed module _id strings
   },
   { timestamps: true }
 );
