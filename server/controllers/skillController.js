@@ -14,6 +14,7 @@ async function getUserEmail(userId) {
   const primary = emails.find((e) => e.id === user.primaryEmailAddressId);
   return primary?.emailAddress || emails[0]?.emailAddress || null;
 }
+
 const generateFileUrl = (req, filePath) => {
   const fileName = path.basename(filePath);
   const uploadType = filePath.includes("certificates")
@@ -23,6 +24,7 @@ const generateFileUrl = (req, filePath) => {
     : "uploads";
   return `/uploads/${uploadType}/${fileName}`;
 };
+
 // GET published skills
 exports.getSkills = asyncHandler(async (req, res) => {
   const { category, level, paymentOptions, page = 1, limit = 10, sort = 'recent' } = req.query;
@@ -139,7 +141,7 @@ exports.getSkillForEdit = asyncHandler(async (req, res) => {
   res.json({ success: true, data: skill });
 });
 
-// CREATE skill with OCR verification and optional intro video
+// CREATE skill with OCR verification (credential ID + title matching)
 exports.createSkill = asyncHandler(async (req, res) => {
   try {
     const { userId } = getAuth(req);
@@ -190,18 +192,19 @@ exports.createSkill = asyncHandler(async (req, res) => {
     const certificatePath = path.join(__dirname, "..", certificateFile.path);
     const isImage = certificateFile.mimetype.startsWith("image/");
 
-    // OCR Verification (for images only)
+    // OCR Verification (for images only) - NOW INCLUDES TITLE VERIFICATION
     if (isImage) {
-      console.log("Starting credential verification...");
+      console.log("Starting certificate verification (credential ID + title matching)...");
 
       const verificationResult = await verifyCertificateCredential(
         certificatePath,
-        body.credentialId
+        body.credentialId,
+        body.title // Pass the skill title for verification
       );
 
       console.log("Verification result:", verificationResult);
 
-      // If verification fails, clean up and return error
+      // If verification fails, clean up and return detailed error
       if (!verificationResult.success) {
         const fsPromises = fs.promises;
         await fsPromises.unlink(certificatePath).catch(() => {});
@@ -210,16 +213,37 @@ exports.createSkill = asyncHandler(async (req, res) => {
           await fsPromises.unlink(videoPath).catch(() => {});
         }
 
+        // Provide detailed error message
+        let detailedMessage = verificationResult.message;
+        
+        if (!verificationResult.credentialValid && !verificationResult.titleValid) {
+          detailedMessage += '\n\nVerification failed on both checks:\n' +
+            '• Credential ID was not found in the certificate\n' +
+            '• No words from your skill title were found in the certificate';
+        } else if (!verificationResult.credentialValid) {
+          detailedMessage += '\n\n✓ Title matched successfully\n' +
+            '✗ Credential ID verification failed';
+        } else if (!verificationResult.titleValid) {
+          detailedMessage += '\n\n✓ Credential ID matched successfully\n' +
+            '✗ Title verification failed - none of the meaningful words from your title appear in the certificate';
+        }
+
         return res.status(400).json({
           success: false,
-          message:
-            verificationResult.message ||
-            "Credential ID not found in certificate. Please ensure it matches exactly.",
-          verificationFailed: true
+          message: detailedMessage,
+          verificationFailed: true,
+          details: {
+            credentialValid: verificationResult.credentialValid,
+            titleValid: verificationResult.titleValid,
+            matchedWords: verificationResult.matchedWords,
+            totalTitleWords: verificationResult.totalTitleWords
+          }
         });
       }
 
-      console.log("Credential verified successfully!");
+      console.log(`Certificate verified successfully! ` +
+        `Credential ID found and ${verificationResult.matchedWords.length}/${verificationResult.totalTitleWords} ` +
+        `title words matched.`);
     } else {
       console.log("PDF uploaded - skipping OCR verification (PDF OCR not implemented)");
     }
@@ -305,8 +329,39 @@ exports.updateSkill = async (req, res) => {
     const { skillData } = req.body;
     const parsedData = typeof skillData === 'string' ? JSON.parse(skillData) : skillData;
 
-    // Handle new certificate upload
+    // Handle new certificate upload with verification
     if (req.files && req.files['certificate'] && req.files['certificate'][0]) {
+      const certificateFile = req.files['certificate'][0];
+      const certificatePath = path.join(__dirname, "..", certificateFile.path);
+      const isImage = certificateFile.mimetype.startsWith("image/");
+
+      // Verify new certificate if it's an image
+      if (isImage) {
+        console.log("Verifying new certificate...");
+        
+        const verificationResult = await verifyCertificateCredential(
+          certificatePath,
+          parsedData.credentialId || skill.credentialId,
+          parsedData.title || skill.title
+        );
+
+        if (!verificationResult.success) {
+          // Clean up the uploaded file
+          fs.unlinkSync(certificatePath);
+          
+          return res.status(400).json({
+            success: false,
+            message: verificationResult.message,
+            verificationFailed: true,
+            details: {
+              credentialValid: verificationResult.credentialValid,
+              titleValid: verificationResult.titleValid
+            }
+          });
+        }
+      }
+
+      // Delete old certificate
       if (skill.certificateUrl) {
         const oldCertPath = skill.certificateUrl.split('/uploads/')[1];
         const fullPath = path.join(__dirname, '../uploads/', oldCertPath);
@@ -314,7 +369,8 @@ exports.updateSkill = async (req, res) => {
           fs.unlinkSync(fullPath);
         }
       }
-      parsedData.certificateUrl = generateFileUrl(req, req.files['certificate'][0].path);
+      
+      parsedData.certificateUrl = generateFileUrl(req, certificateFile.path);
     }
 
     // Handle new video upload
