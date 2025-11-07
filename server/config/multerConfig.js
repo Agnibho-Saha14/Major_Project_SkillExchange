@@ -51,10 +51,10 @@ const storage = multer.diskStorage({
 const fileFilter = (req, file, cb) => {
   const fileTypes = {
     certificate: {
-      mimetypes: ['image/jpeg', 'image/jpg', 'image/png', 'application/pdf'],
-      extensions: /jpeg|jpg|png|pdf/,
+      mimetypes: ['image/jpeg', 'image/jpg', 'image/png'],
+      extensions: /jpeg|jpg|png/,
       maxSize: 5 * 1024 * 1024, // 5MB
-      errorMsg: 'Only images (JPEG, JPG, PNG) and PDF files are allowed for certificates'
+      errorMsg: 'Only images (JPEG, JPG, PNG) files are allowed for certificates'
     },
     introVideo: {
       mimetypes: ['video/mp4', 'video/mpeg', 'video/quicktime', 'video/x-msvideo', 'video/webm'],
@@ -94,9 +94,9 @@ const fileFilter = (req, file, cb) => {
 const upload = multer({
   storage,
   limits: { 
-    fileSize: 100 * 1024 * 1024, // 100MB max (will be validated per field type)
-    files: 10, // Maximum number of files
-    fields: 20 // Maximum number of non-file fields
+    fileSize: 100 * 1024 * 1024, 
+    files: 10, 
+    fields: 20
   },
   fileFilter
 });
