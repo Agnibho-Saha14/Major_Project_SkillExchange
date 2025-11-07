@@ -2,6 +2,9 @@ const Tesseract = require('tesseract.js');
 const sharp = require('sharp');
 const fs = require('fs').promises;
 const path = require('path');
+const { GoogleGenerativeAI } = require('@google/generative-ai');
+
+const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 
 //image preprocessing
 async function preprocessImage(inputPath, variant = 'default') {
@@ -153,91 +156,132 @@ async function extractTextFromImage(imagePath) {
 }
 
 /**
- * Verify skill title appears in certificate
- * At least one significant word from the title must be present
+ * Use Gemini AI to verify if skill title matches certificate content
+ * Also checks for inappropriate content in skill title
  */
-function verifySkillTitle(extractedText, skillTitle) {
-  if (!extractedText || !skillTitle) return { success: false, matchedWords: [] };
+async function verifySkillTitleWithGemini(extractedText, skillTitle) {
+  try {
+    console.log('\n=== Gemini AI Title Verification ===');
+    console.log('Skill Title:', skillTitle);
+    console.log('Certificate Text Length:', extractedText.length);
 
-  // Normalize extracted text
-  const normalizedText = extractedText
-    .toLowerCase()
-    .replace(/[^\w\s]/g, ' ')
-    .replace(/\s+/g, ' ');
-
-  // Extract meaningful words from title (ignore common words)
-  const commonWords = ['the', 'a', 'an', 'and', 'or', 'but', 'in', 'on', 'at', 'to', 'for', 'of', 'with', 'by'];
-  const titleWords = skillTitle
-    .toLowerCase()
-    .split(/\s+/)
-    .map(w => w.replace(/[^\w]/g, ''))
-    .filter(w => w.length >= 3 && !commonWords.includes(w));
-
-  console.log('\n=== Title Verification ===');
-  console.log('Skill Title:', skillTitle);
-  console.log('Extracted meaningful words:', titleWords);
-
-  if (titleWords.length === 0) {
-    console.log('⚠️  No meaningful words found in title');
-    return { success: false, matchedWords: [] };
-  }
-
-  const matchedWords = [];
-
-  // Check each word with fuzzy matching
-  for (const word of titleWords) {
-    // Direct match
-    if (normalizedText.includes(word)) {
-      matchedWords.push(word);
-      console.log(`✓ Direct match found: "${word}"`);
-      continue;
+    if (!process.env.GEMINI_API_KEY) {
+      console.error('❌ GEMINI_API_KEY not found in environment variables');
+      return {
+        success: false,
+        isRelevant: false,
+        isAppropriate: false,
+        confidence: 0,
+        reason: 'Gemini API key not configured',
+        certificateTitle: '',
+        aiAnalysis: 'API key missing'
+      };
     }
 
-    // Fuzzy match with common variations
-    const variations = [
-      word,
-      word.replace(/s$/, ''), // Remove plural
-      word + 's', // Add plural
-      word.replace(/ing$/, ''), // Remove -ing
-      word.replace(/ed$/, ''), // Remove -ed
-    ];
+    const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' });
 
-    let found = false;
-    for (const variant of variations) {
-      if (normalizedText.includes(variant)) {
-        matchedWords.push(word);
-        console.log(`✓ Variant match found: "${word}" → "${variant}"`);
-        found = true;
-        break;
-      }
+    const prompt = `You are an expert education certificate validator. Analyze if the submitted skill title matches the certificate content.
+
+**Certificate Text (extracted via OCR):**
+${extractedText.substring(0, 3000)}
+
+**Submitted Skill Title:**
+"${skillTitle}"
+
+Please perform TWO analyses:
+
+**ANALYSIS 1 - Content Appropriateness:**
+Check if the skill title contains any inappropriate, abusive, offensive, or unprofessional language. This includes profanity, hate speech, discriminatory terms, or any content that would be unsuitable for an educational platform.
+
+**ANALYSIS 2 - Certificate Relevance:**
+Determine if the skill title is relevant to what the certificate teaches. Consider:
+1. Is the skill title the SAME course as the certificate? (e.g., "Web Development" matches "Web Development Certificate")
+2. Is the skill title a SUBSET or specialization of the certificate? (e.g., "React Development" is a subset of "Full Stack Development Certificate")
+3. Is the skill title a SUPERSET that includes the certificate content? (e.g., "Full Stack Development" includes "React Basics Certificate")
+4. Are they related but in the same domain? (e.g., "Data Science" and "Machine Learning" are closely related)
+5. Completely UNRELATED topics should NOT match (e.g., "Cooking" and "Web Development")
+
+**Respond in EXACTLY this JSON format (no additional text):**
+{
+  "isAppropriate": true/false,
+  "inappropriateReason": "explanation if false, empty string if true",
+  "isRelevant": true/false,
+  "confidence": 0-100,
+  "relationship": "same|subset|superset|related|unrelated",
+  "certificateTitle": "extracted certificate title",
+  "reason": "brief explanation of match/mismatch"
+}
+
+**Important:**
+- Set isAppropriate to false if ANY inappropriate content detected
+- Set isRelevant to true ONLY if relationship is same/subset/superset/related
+- Set isRelevant to false if topics are completely unrelated
+- Confidence should be 0-100 (higher = more certain)
+- Be strict but fair - legitimate educational variations are acceptable`;
+
+    const result = await model.generateContent(prompt);
+    const response = await result.response;
+    const text = response.text();
+    
+    console.log('Gemini Raw Response:', text);
+
+    // Extract JSON from response (handle markdown code blocks)
+    let jsonText = text.trim();
+    if (jsonText.startsWith('```json')) {
+      jsonText = jsonText.substring(7);
+    }
+    if (jsonText.startsWith('```')) {
+      jsonText = jsonText.substring(3);
+    }
+    if (jsonText.endsWith('```')) {
+      jsonText = jsonText.substring(0, jsonText.length - 3);
+    }
+    jsonText = jsonText.trim();
+
+    const analysis = JSON.parse(jsonText);
+
+    console.log('\n=== Gemini Analysis Results ===');
+    console.log('Appropriate Content:', analysis.isAppropriate);
+    console.log('Relevant to Certificate:', analysis.isRelevant);
+    console.log('Relationship:', analysis.relationship);
+    console.log('Confidence:', analysis.confidence + '%');
+    console.log('Certificate Title:', analysis.certificateTitle);
+    console.log('Reason:', analysis.reason);
+
+    if (!analysis.isAppropriate) {
+      console.log('⚠️ INAPPROPRIATE CONTENT DETECTED:', analysis.inappropriateReason);
     }
 
-    // Check for partial fuzzy matches in the text
-    if (!found && word.length >= 5) {
-      const words = normalizedText.split(' ');
-      for (const textWord of words) {
-        if (textWord.length >= 4) {
-          const similarity = calculateSimilarity(word, textWord);
-          if (similarity >= 0.8) {
-            matchedWords.push(word);
-            console.log(`✓ Fuzzy match found: "${word}" ≈ "${textWord}" (${(similarity * 100).toFixed(1)}%)`);
-            found = true;
-            break;
-          }
-        }
-      }
+    if (analysis.isRelevant && analysis.isAppropriate) {
+      console.log('✅ Title verification PASSED');
+    } else {
+      console.log('❌ Title verification FAILED');
     }
-  }
 
-  const success = matchedWords.length > 0;
-  
-  if (success) {
-    console.log(`✅ Title verification passed! Matched ${matchedWords.length}/${titleWords.length} words`);
-  } else {
-    console.log('❌ Title verification failed - no words from title found in certificate');
-  }
+    return {
+      success: analysis.isRelevant && analysis.isAppropriate,
+      isRelevant: analysis.isRelevant,
+      isAppropriate: analysis.isAppropriate,
+      inappropriateReason: analysis.inappropriateReason || '',
+      confidence: analysis.confidence,
+      relationship: analysis.relationship,
+      certificateTitle: analysis.certificateTitle,
+      reason: analysis.reason,
+      aiAnalysis: text.substring(0, 1000)
+    };
 
-  return { success, matchedWords, totalWords: titleWords.length };
+  } catch (error) {
+    console.error('Gemini AI Error:', error);
+    return {
+      success: false,
+      isRelevant: false,
+      isAppropriate: true,
+      confidence: 0,
+      reason: 'AI analysis failed: ' + error.message,
+      certificateTitle: '',
+      aiAnalysis: error.message
+    };
+  }
 }
 
 /**
@@ -328,45 +372,72 @@ function levenshtein(a, b) {
 }
 
 /**
- * Main verification function - checks both credential ID and skill title
+ * Main verification function - checks credential ID and uses Gemini AI for title verification
  */
 async function verifyCertificateCredential(certificatePath, credentialId, skillTitle) {
   try {
-    console.log('\n🔍 Starting OCR Certificate Verification');
+    console.log('\n🔍 Starting OCR Certificate Verification with Gemini AI');
     console.log('Certificate:', certificatePath);
     console.log('Credential ID:', credentialId);
     console.log('Skill Title:', skillTitle);
 
     const extractedText = await extractTextFromImage(certificatePath);
     
-    // Verify credential ID
+    // Verify credential ID (original logic)
     const credentialValid = verifyCredentialId(extractedText, credentialId);
     
-    // Verify skill title
-    const titleVerification = verifySkillTitle(extractedText, skillTitle);
+    // Verify skill title with Gemini AI
+    const titleVerification = await verifySkillTitleWithGemini(extractedText, skillTitle);
 
     const allValid = credentialValid && titleVerification.success;
 
     let message = '';
-    if (!credentialValid && !titleVerification.success) {
-      message = '❌ Both credential ID and skill title verification failed. Please ensure:\n' +
-                '1. The credential ID matches exactly what appears on the certificate\n' +
-                '2. At least one word from your skill title appears in the certificate';
+    if (!titleVerification.isAppropriate) {
+      message = `❌ INAPPROPRIATE CONTENT DETECTED in skill title.\n\n` +
+                `Reason: ${titleVerification.inappropriateReason}\n\n` +
+                `Please provide a professional, appropriate skill title.`;
+    } else if (!credentialValid && !titleVerification.isRelevant) {
+      message = `❌ Both credential ID and skill title verification failed.\n\n` +
+                `**Credential ID:** Not found in certificate\n` +
+                `**Skill Title:** ${titleVerification.reason}\n\n` +
+                `Certificate appears to be for: "${titleVerification.certificateTitle}"\n` +
+                `Your skill title: "${skillTitle}"\n` +
+                `Relationship: ${titleVerification.relationship} (${titleVerification.confidence}% confidence)`;
     } else if (!credentialValid) {
-      message = '❌ Credential ID not found in certificate. Please verify the credential ID matches exactly.';
-    } else if (!titleVerification.success) {
-      message = `❌ Skill title verification failed. None of the meaningful words from "${skillTitle}" were found in the certificate. ` +
-                'Please ensure your skill title relates to the certificate content.';
+      message = `❌ Credential ID not found in certificate.\n\n` +
+                `The credential ID "${credentialId}" could not be located in the certificate text. ` +
+                `Please verify it matches exactly what appears on your certificate.\n\n` +
+                `✓ Skill title is relevant to the certificate`;
+    } else if (!titleVerification.isRelevant) {
+      message = `❌ Skill title does not match certificate content.\n\n` +
+                `**AI Analysis:** ${titleVerification.reason}\n\n` +
+                `**Certificate appears to be for:** "${titleVerification.certificateTitle}"\n` +
+                `**Your skill title:** "${skillTitle}"\n` +
+                `**Relationship:** ${titleVerification.relationship}\n` +
+                `**Confidence:** ${titleVerification.confidence}%\n\n` +
+                `Please ensure your skill title accurately reflects what the certificate teaches. ` +
+                `The skill can be the same course, a subset, or a specialization of the certificate content.\n\n` +
+                `✓ Credential ID verified successfully`;
     } else {
-      message = `✅ Certificate verified successfully! Credential ID found and ${titleVerification.matchedWords.length} word(s) from title matched.`;
+      message = `✅ Certificate verified successfully!\n\n` +
+                `**Credential ID:** Found and verified\n` +
+                `**Skill Title:** Matches certificate content\n` +
+                `**Certificate Title:** "${titleVerification.certificateTitle}"\n` +
+                `**Relationship:** ${titleVerification.relationship}\n` +
+                `**AI Confidence:** ${titleVerification.confidence}%\n\n` +
+                `${titleVerification.reason}`;
     }
 
     return {
       success: allValid,
       credentialValid,
-      titleValid: titleVerification.success,
-      matchedWords: titleVerification.matchedWords,
-      totalTitleWords: titleVerification.totalWords,
+      titleValid: titleVerification.isRelevant,
+      isAppropriate: titleVerification.isAppropriate,
+      inappropriateReason: titleVerification.inappropriateReason,
+      confidence: titleVerification.confidence,
+      relationship: titleVerification.relationship,
+      certificateTitle: titleVerification.certificateTitle,
+      aiReason: titleVerification.reason,
       extractedText: extractedText.substring(0, 1500),
       message
     };
@@ -376,6 +447,7 @@ async function verifyCertificateCredential(certificatePath, credentialId, skillT
       success: false,
       credentialValid: false,
       titleValid: false,
+      isAppropriate: true,
       message: 'Failed to verify certificate. Please ensure the image is clear and readable.',
       error: error.message
     };
@@ -386,5 +458,5 @@ module.exports = {
   verifyCertificateCredential,
   extractTextFromImage,
   verifyCredentialId,
-  verifySkillTitle
+  verifySkillTitleWithGemini
 };

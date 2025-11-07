@@ -471,7 +471,7 @@ export default function PublishSkillPage() {
                           <p className="mb-2 text-sm text-gray-500">
                             <span className="font-semibold">Click to upload</span> or drag and drop
                           </p>
-                          <p className="text-xs text-gray-500">PNG, JPG, JPEG or PDF (MAX. 5MB)</p>
+                          <p className="text-xs text-gray-500">PNG, JPG, JPEG (MAX. 5MB)</p>
                         </div>
                         <input
                           type="file"

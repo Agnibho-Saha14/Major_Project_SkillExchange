@@ -141,7 +141,7 @@ exports.getSkillForEdit = asyncHandler(async (req, res) => {
   res.json({ success: true, data: skill });
 });
 
-// CREATE skill with OCR verification (credential ID + title matching)
+// CREATE skill with Gemini AI verification (credential ID + intelligent title matching)
 exports.createSkill = asyncHandler(async (req, res) => {
   try {
     const { userId } = getAuth(req);
@@ -192,17 +192,18 @@ exports.createSkill = asyncHandler(async (req, res) => {
     const certificatePath = path.join(__dirname, "..", certificateFile.path);
     const isImage = certificateFile.mimetype.startsWith("image/");
 
-    // OCR Verification (for images only) - NOW INCLUDES TITLE VERIFICATION
+    // Gemini AI Verification (for images only)
     if (isImage) {
-      console.log("Starting certificate verification (credential ID + title matching)...");
+      console.log("\n🤖 Starting Gemini AI certificate verification...");
+      console.log("Verifying: Credential ID + Intelligent Title Matching + Content Appropriateness");
 
       const verificationResult = await verifyCertificateCredential(
         certificatePath,
         body.credentialId,
-        body.title // Pass the skill title for verification
+        body.title
       );
 
-      console.log("Verification result:", verificationResult);
+      console.log("\n📊 Verification result:", verificationResult);
 
       // If verification fails, clean up and return detailed error
       if (!verificationResult.success) {
@@ -213,39 +214,50 @@ exports.createSkill = asyncHandler(async (req, res) => {
           await fsPromises.unlink(videoPath).catch(() => {});
         }
 
-        // Provide detailed error message
+        // Build detailed error message
         let detailedMessage = verificationResult.message;
         
-        if (!verificationResult.credentialValid && !verificationResult.titleValid) {
-          detailedMessage += '\n\nVerification failed on both checks:\n' +
-            '• Credential ID was not found in the certificate\n' +
-            '• No words from your skill title were found in the certificate';
-        } else if (!verificationResult.credentialValid) {
-          detailedMessage += '\n\n✓ Title matched successfully\n' +
-            '✗ Credential ID verification failed';
-        } else if (!verificationResult.titleValid) {
-          detailedMessage += '\n\n✓ Credential ID matched successfully\n' +
-            '✗ Title verification failed - none of the meaningful words from your title appear in the certificate';
+        // Additional context for debugging
+        let errorDetails = {
+          credentialValid: verificationResult.credentialValid,
+          titleValid: verificationResult.titleValid,
+          isAppropriate: verificationResult.isAppropriate
+        };
+
+        // Add AI analysis details
+        if (verificationResult.certificateTitle) {
+          errorDetails.certificateTitle = verificationResult.certificateTitle;
         }
+        if (verificationResult.relationship) {
+          errorDetails.relationship = verificationResult.relationship;
+        }
+        if (verificationResult.confidence !== undefined) {
+          errorDetails.aiConfidence = verificationResult.confidence;
+        }
+        if (verificationResult.aiReason) {
+          errorDetails.aiAnalysis = verificationResult.aiReason;
+        }
+        if (verificationResult.inappropriateReason) {
+          errorDetails.inappropriateReason = verificationResult.inappropriateReason;
+        }
+
+        console.log("❌ Verification failed:", errorDetails);
 
         return res.status(400).json({
           success: false,
           message: detailedMessage,
           verificationFailed: true,
-          details: {
-            credentialValid: verificationResult.credentialValid,
-            titleValid: verificationResult.titleValid,
-            matchedWords: verificationResult.matchedWords,
-            totalTitleWords: verificationResult.totalTitleWords
-          }
+          details: errorDetails
         });
       }
 
-      console.log(`Certificate verified successfully! ` +
-        `Credential ID found and ${verificationResult.matchedWords.length}/${verificationResult.totalTitleWords} ` +
-        `title words matched.`);
+      console.log(`✅ Certificate verified successfully with Gemini AI!`);
+      console.log(`   - Credential ID: Found`);
+      console.log(`   - Title Match: ${verificationResult.relationship} (${verificationResult.confidence}% confidence)`);
+      console.log(`   - Content: Appropriate`);
+      console.log(`   - Certificate: "${verificationResult.certificateTitle}"`);
     } else {
-      console.log("PDF uploaded - skipping OCR verification (PDF OCR not implemented)");
+      console.log("📄 PDF uploaded - skipping OCR verification (PDF OCR not implemented)");
     }
 
     // Generate URLs for uploaded files
@@ -253,7 +265,7 @@ exports.createSkill = asyncHandler(async (req, res) => {
     let introVideoUrl = "";
     if (req.files?.introVideo && req.files.introVideo[0]) {
       introVideoUrl = generateFileUrl(req, req.files.introVideo[0].path);
-      console.log("Intro video uploaded successfully");
+      console.log("🎥 Intro video uploaded successfully");
     }
 
     // Create Skill entry
@@ -268,11 +280,11 @@ exports.createSkill = asyncHandler(async (req, res) => {
 
     res.status(201).json({
       success: true,
-      message: "Skill created successfully with verified credentials",
+      message: "✅ Skill created successfully with AI-verified credentials",
       data: newSkill
     });
   } catch (error) {
-    console.error("Error creating skill:", error);
+    console.error("❌ Error creating skill:", error);
 
     // Clean up uploaded files if something fails
     if (req.files) {
@@ -296,7 +308,7 @@ exports.createSkill = asyncHandler(async (req, res) => {
   }
 });
 
-// UPDATE skill (excluding price - price is fixed after creation)
+// UPDATE skill (with Gemini AI verification for certificate changes)
 exports.updateSkill = async (req, res) => {
   try {
     const { userId } = getAuth(req);
@@ -329,15 +341,15 @@ exports.updateSkill = async (req, res) => {
     const { skillData } = req.body;
     const parsedData = typeof skillData === 'string' ? JSON.parse(skillData) : skillData;
 
-    // Handle new certificate upload with verification
+    // Handle new certificate upload with Gemini AI verification
     if (req.files && req.files['certificate'] && req.files['certificate'][0]) {
       const certificateFile = req.files['certificate'][0];
       const certificatePath = path.join(__dirname, "..", certificateFile.path);
       const isImage = certificateFile.mimetype.startsWith("image/");
 
-      // Verify new certificate if it's an image
+      // Verify new certificate with Gemini AI if it's an image
       if (isImage) {
-        console.log("Verifying new certificate...");
+        console.log("\n🤖 Verifying updated certificate with Gemini AI...");
         
         const verificationResult = await verifyCertificateCredential(
           certificatePath,
@@ -349,16 +361,34 @@ exports.updateSkill = async (req, res) => {
           // Clean up the uploaded file
           fs.unlinkSync(certificatePath);
           
+          let errorDetails = {
+            credentialValid: verificationResult.credentialValid,
+            titleValid: verificationResult.titleValid,
+            isAppropriate: verificationResult.isAppropriate
+          };
+
+          if (verificationResult.certificateTitle) {
+            errorDetails.certificateTitle = verificationResult.certificateTitle;
+          }
+          if (verificationResult.relationship) {
+            errorDetails.relationship = verificationResult.relationship;
+          }
+          if (verificationResult.confidence !== undefined) {
+            errorDetails.aiConfidence = verificationResult.confidence;
+          }
+          if (verificationResult.inappropriateReason) {
+            errorDetails.inappropriateReason = verificationResult.inappropriateReason;
+          }
+          
           return res.status(400).json({
             success: false,
             message: verificationResult.message,
             verificationFailed: true,
-            details: {
-              credentialValid: verificationResult.credentialValid,
-              titleValid: verificationResult.titleValid
-            }
+            details: errorDetails
           });
         }
+
+        console.log("✅ Updated certificate verified successfully");
       }
 
       // Delete old certificate
@@ -436,7 +466,7 @@ exports.deleteSkill = asyncHandler(async (req, res) => {
   res.json({ success: true, message: 'Skill deleted successfully' });
 });
 
-// SAVE draft (with OCR verification and optional intro video)
+// SAVE draft (without OCR verification for drafts)
 exports.saveDraft = async (req, res) => {
   try {
     const { userId } = getAuth(req);
@@ -500,7 +530,7 @@ exports.saveDraft = async (req, res) => {
   }
 };
 
-// PUBLISH skill
+// PUBLISH skill (with Gemini AI verification when publishing from draft)
 exports.publishSkill = asyncHandler(async (req, res) => {
   const { userId } = getAuth(req);
   const skill = await Skill.findById(req.params.id);
@@ -512,6 +542,41 @@ exports.publishSkill = asyncHandler(async (req, res) => {
 
   if (String(skill.ownerId) !== String(userId)) {
     return res.status(403).json({ success: false, message: 'You can only publish your own skills' });
+  }
+
+  // If publishing from draft, verify the certificate with Gemini AI
+  if (skill.status === 'draft' && skill.certificateUrl) {
+    const certificatePath = path.join(__dirname, '..', skill.certificateUrl);
+    
+    if (fs.existsSync(certificatePath)) {
+      const isImage = skill.certificateUrl.match(/\.(jpg|jpeg|png)$/i);
+      
+      if (isImage) {
+        console.log("\n🤖 Verifying certificate before publishing...");
+        
+        const verificationResult = await verifyCertificateCredential(
+          certificatePath,
+          skill.credentialId,
+          skill.title
+        );
+
+        if (!verificationResult.success) {
+          return res.status(400).json({
+            success: false,
+            message: `Cannot publish: ${verificationResult.message}`,
+            verificationFailed: true,
+            details: {
+              credentialValid: verificationResult.credentialValid,
+              titleValid: verificationResult.titleValid,
+              isAppropriate: verificationResult.isAppropriate,
+              aiAnalysis: verificationResult.aiReason
+            }
+          });
+        }
+
+        console.log("✅ Certificate verified - proceeding with publication");
+      }
+    }
   }
 
   skill.status = 'published';
