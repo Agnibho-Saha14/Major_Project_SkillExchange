@@ -32,7 +32,7 @@ export default function Pagination({ pagination, onPageChange }) {
         variant="outline"
         onClick={() => onPageChange(pagination.page - 1)}
         disabled={pagination.page === 1}
-        className="px-4 py-2"
+        className="cursor-pointer px-4 py-2"
       >
         Previous
       </Button>
@@ -54,7 +54,7 @@ export default function Pagination({ pagination, onPageChange }) {
         variant="outline"
         onClick={() => onPageChange(pagination.page + 1)}
         disabled={pagination.page === pagination.pages}
-        className="px-4 py-2"
+        className="px-4 py-2 cursor-pointer"
       >
         Next
       </Button>
