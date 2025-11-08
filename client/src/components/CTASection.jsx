@@ -11,7 +11,7 @@ export default function CTASection({
       <h2 className="text-3xl font-bold mb-4">{title}</h2>
       <p className="text-xl text-indigo-100 mb-6">{subtitle}</p>
       <a href={buttonLink}>
-        <Button className="bg-white text-indigo-600 hover:bg-indigo-50 font-semibold px-8 py-3 text-lg">
+        <Button className="cursor-pointer bg-white text-indigo-600 hover:bg-indigo-50 font-semibold px-8 py-3 text-lg">
           {buttonText}
         </Button>
       </a>

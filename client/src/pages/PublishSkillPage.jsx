@@ -9,7 +9,7 @@ import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { Checkbox } from "@/components/ui/checkbox"
-import { BookOpen, Plus, X, CheckCircle, AlertCircle, Loader2,BookCopy } from "lucide-react"
+import { BookOpen, Plus, X, CheckCircle, AlertCircle, Loader2, BookCopy } from "lucide-react"
 import Navbar from "@/components/Navbar"
 
 
@@ -103,8 +103,8 @@ export default function PublishSkillPage() {
     }
   }
   const handleAddModule = () => {
-    if (!currentModule.title.trim()) {
-      showToast("Please enter a module title", "error");
+    if (!currentModule.title.trim() || !currentModule.description.trim()) {
+      showToast("Please enter module title and description", "error");
       return;
     }
     setForm(prev => ({
@@ -114,10 +114,13 @@ export default function PublishSkillPage() {
         {
           ...currentModule,
           order: prev.modules.length + 1,
-           // Initialize with an empty videos array
+          // Initialize with an empty videos array
+          
         }
       ]
     }));
+  
+    
     setCurrentModule({ title: "", description: "" }); // Reset module input
   };
 
@@ -196,7 +199,7 @@ export default function PublishSkillPage() {
     setLoadingState(true);
     try {
       const formData = new FormData();
-            
+
       const skillData = {
         ...form,
         status: endpoint.includes('draft') ? 'draft' : 'published'
@@ -287,10 +290,9 @@ export default function PublishSkillPage() {
       setLoadingState(false);
     }
   };
-
-
   const handleSubmit = (e) => {
     e.preventDefault()
+    
 
     // Updated required fields to include credentialId
     const requiredFields = ['title', 'category', 'level', 'duration', 'timePerWeek', 'description', 'credentialId']
@@ -585,7 +587,7 @@ export default function PublishSkillPage() {
               </div>
 
 
-              
+
               {/* --- NEW SECTION: Course Content / Modules --- */}
               <div className="p-6 border-2 border-gray-200 rounded-2xl bg-gradient-to-r from-teal-50 to-cyan-50">
                 <Label className="text-xl font-bold text-gray-800 mb-4 block">
@@ -629,13 +631,13 @@ export default function PublishSkillPage() {
                     onChange={(e) => setCurrentModule(prev => ({ ...prev, title: e.target.value }))}
                   />
                   <Textarea
-                    placeholder="Module Description (optional)"
+                    placeholder="Module Description"
                     rows={2}
                     value={currentModule.description}
                     onChange={(e) => setCurrentModule(prev => ({ ...prev, description: e.target.value }))}
                   />
                   <Button
-                    type="button" 
+                    type="button"
                     variant="outline"
                     onClick={handleAddModule}
                   >

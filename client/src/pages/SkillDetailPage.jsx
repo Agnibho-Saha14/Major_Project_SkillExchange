@@ -675,10 +675,6 @@ const handleCompleteModule = useCallback(async (moduleId, moduleTitle) => {
     setActiveModuleId(prevId => (prevId === moduleId ? null : moduleId));
   };
 
-  const handleAddModule = () => {
-    alert("[Action Placeholder]: Opening form to add a new module.");
-  };
-
   const handleAddVideo = (moduleTitle) => {
     alert(`[Action Placeholder]: Opening form to add video to Module: ${moduleTitle}`);
   };
@@ -1049,19 +1045,6 @@ const handleCompleteModule = useCallback(async (moduleId, moduleTitle) => {
                           totalModules={skill.modules?.length || 0}
                           completedModulesCount={completedModules.length}
                         />
-                      )}
-
-                      {/* Add Module Button (Visible only to the Owner) */}
-                      {isOwnSkill && (
-                        <div className="flex justify-end mb-4">
-                          <Button
-                            onClick={handleAddModule}
-                            className="bg-green-600 hover:bg-green-700 flex items-center"
-                          >
-                            <Plus className="w-5 h-5 mr-2" />
-                            Add New Module
-                          </Button>
-                        </div>
                       )}
 
                       {loading || enrollmentLoading ? (
