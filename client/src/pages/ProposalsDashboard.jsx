@@ -1,6 +1,6 @@
 // client/src/pages/ProposalsDashboard.jsx
 import React, { useState, useEffect } from 'react';
-import { useAuth } from "@clerk/clerk-react"; 
+import { useAuth,useUser } from "@clerk/clerk-react"; 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import LoadingState from "@/components/LoadingState"; // Ensure this component exists
@@ -8,8 +8,11 @@ import EmptyState from "@/components/EmptyState"; // Ensure this component exist
 import ErrorState from "@/components/ErrorState"; // Ensure this component exists
 import { MessageSquare, Check, X, ArrowRight } from 'lucide-react'; 
 import { Link } from 'react-router-dom';
+import emailjs from "emailjs-com";
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+
+
 
 function ProposalCard({ proposal, onAction }) {
     const { _id, skillId, offeredSkills, message, status, proposerName, proposerEmail, createdAt } = proposal;
@@ -100,6 +103,7 @@ function ProposalCard({ proposal, onAction }) {
 
 export default function ProposalsDashboard() {
     const { getToken } = useAuth();
+    const { user } = useUser();
     const [proposals, setProposals] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
@@ -141,10 +145,41 @@ export default function ProposalsDashboard() {
             const result = await response.json();
 
             if (result.success) {
-                // Update local state to reflect the status change
-                setProposals(proposals.map(p => 
-                    p._id === proposalId ? { ...p, status: action, dateActioned: new Date().toISOString() } : p
-                ));
+            
+            const currentProposal = proposals.find(p => p._id === proposalId);
+            
+            if (!currentProposal) {
+                console.error("Proposal data not found in state.");
+                return;
+            }
+
+            
+            const templateParams = {
+                to_email: currentProposal.proposerEmail,
+                from_name: "SkillExchange",
+                to_name: currentProposal.proposerName, // Changed from user.fullName to proposerName
+                instructor_name: user?.fullName || "Instructor", // The person accepting (Current User)
+                title: currentProposal.skillId?.title || "the course",
+                message: action === 'accept' 
+                    ? `Your proposed exchange has been accepted and you have successfully enrolled in: "${currentProposal.skillId?.title}".`
+                    : `Your proposed exchange for "${currentProposal.skillId?.title}" has been rejected. Kindly contact the instructor for more details.`,
+            };
+
+            
+            emailjs.send(
+                import.meta.env.VITE_EMAILJS_EXCHANGE_SERVICE_ID,
+                import.meta.env.VITE_EMAILJS_EXCHANGE_TEMPLATE_ID,
+                templateParams,
+                import.meta.env.VITE_EMAILJS_EXCHANGE_PUBLIC_KEY
+            )
+            .then((res) => console.log('Email sent successfully!', res.status))
+            .catch((err) => console.error('Email failed to send:', err));
+
+            // Update local state UI
+            setProposals(proposals.map(p => 
+                p._id === proposalId ? { ...p, status: action, dateActioned: new Date().toISOString() } : p
+            ));
+                
             } else {
                 alert(result.message || `Failed to ${action} proposal.`);
             }
