@@ -680,13 +680,25 @@ const handleCompleteModule = useCallback(async (moduleId, moduleTitle) => {
   };
 
   // **FIX: Critical Bug** - Implement video playback
+  // Helper to determine if we need to prepend the server URL
+  const getFullVideoUrl = (url) => {
+    if (!url) return '';
+    // If it starts with http/https, it's a Cloudinary/external URL
+    if (url.startsWith('http') || url.startsWith('https')) {
+      return url;
+    }
+    // Otherwise, it's a local file, so prepend the server address
+    return `${API_BASE_URL.replace('/api', '')}${url}`;
+  };
+
+
   const handlePlayVideo = (videoTitle, videoUrl) => {
     if (!videoUrl) {
       alert("Video URL is missing.");
       return;
     }
     // Set the full URL for the modal
-    setModalVideoUrl(`${API_BASE_URL.replace('/api', '')}${videoUrl}`);
+    setModalVideoUrl(getFullVideoUrl(videoUrl));
     // Open the modal
     setIsVideoModalOpen(true);
   };
@@ -964,13 +976,14 @@ const handleCompleteModule = useCallback(async (moduleId, moduleTitle) => {
                     <p className="text-xs text-gray-600 mt-1">Level</p>
                   </div>
                 </div>
-
+                
+                {/*use video src={`${API_BASE_URL.replace('/api', '')}${skill.introVideoUrl}`} line 985 in case of cloudinary failure*/}
                 {skill.introVideoUrl && (
                   <div className="mb-6">
                     <h3 className="text-xl font-bold text-gray-900 mb-3">Course Introduction</h3>
                     <div className="relative bg-black rounded-xl overflow-hidden group">
                       <video
-                        src={`${API_BASE_URL.replace('/api', '')}${skill.introVideoUrl}`}
+                        src={getFullVideoUrl(skill.introVideoUrl)}
                         controls
                         className="w-full h-auto max-h-96"
                       >

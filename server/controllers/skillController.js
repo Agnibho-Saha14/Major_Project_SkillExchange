@@ -5,6 +5,10 @@ const { clerkClient } = require('@clerk/clerk-sdk-node');
 const { verifyCertificateCredential } = require('../utils/ocrVerification');
 const path = require('path');
 const fs = require('fs');
+const util = require('util')
+const cloudinary = require('../config/cloudinary');
+const unlinkFile = util.promisify(fs.unlink);
+
 
 async function getUserEmail(userId) {
   if (!userId) return null;
@@ -23,6 +27,22 @@ const generateFileUrl = (req, filePath) => {
     ? "videos"
     : "uploads";
   return `/uploads/${uploadType}/${fileName}`;
+};
+
+const uploadToCloud = async (filePath, folder, resourceType = 'auto') => {
+  try {
+    const result = await cloudinary.uploader.upload(filePath, {
+      folder: `skill_exchange/${folder}`,
+      resource_type: resourceType,
+    });
+    // Delete local file after successful upload
+    await unlinkFile(filePath);
+    return result.secure_url;
+  } catch (error) {
+    // If upload fails, still try to delete local file
+    await unlinkFile(filePath).catch(() => {});
+    throw new Error(`Cloud upload failed: ${error.message}`);
+  }
 };
 
 // GET published skills
@@ -58,6 +78,8 @@ exports.getSkills = asyncHandler(async (req, res) => {
     }
   });
 });
+
+
 
 // GET user's own skills (for dashboard)
 exports.getMySkills = asyncHandler(async (req, res) => {
@@ -140,6 +162,7 @@ exports.getSkillForEdit = asyncHandler(async (req, res) => {
 
   res.json({ success: true, data: skill });
 });
+
 
 // CREATE skill with Gemini AI verification (credential ID + intelligent title matching)
 exports.createSkill = asyncHandler(async (req, res) => {
@@ -261,7 +284,8 @@ exports.createSkill = asyncHandler(async (req, res) => {
     }
 
     // Generate URLs for uploaded files
-    const certificateUrl = generateFileUrl(req, certificateFile.path);
+    //DISK FILE STORAGE (FOR BACKUP IN CASE OF CLOUDINARY FAILURE)
+    /*const certificateUrl = generateFileUrl(req, certificateFile.path);
     let introVideoUrl = "";
     if (req.files?.introVideo && req.files.introVideo[0]) {
       introVideoUrl = generateFileUrl(req, req.files.introVideo[0].path);
@@ -276,6 +300,27 @@ exports.createSkill = asyncHandler(async (req, res) => {
       certificateUrl,
       introVideoUrl,
       status: body.status || "published"
+    });*/
+    //CLOUDINARY UPLOAD(CLOUD STORAGE)
+    console.log("☁️ Uploading certificate to cloud...");
+    const certificateUrl = await uploadToCloud(certificatePath, 'certificates', 'image');
+
+    // 2. Upload Intro Video (if exists)
+    let introVideoUrl = "";
+    if (req.files?.introVideo && req.files.introVideo[0]) {
+      console.log("☁️ Uploading video to cloud...");
+      const videoPath = path.join(__dirname, "..", req.files.introVideo[0].path);
+      introVideoUrl = await uploadToCloud(videoPath, 'videos', 'video');
+      
+    }
+    // Create Skill entry
+    const newSkill = await Skill.create({
+      ...body,
+      ownerId: String(userId),
+      email: email || "",
+      certificateUrl, // Now a Cloudinary URL
+      introVideoUrl,  // Now a Cloudinary URL
+      status: body.status || "published"
     });
 
     res.status(201).json({
@@ -289,10 +334,10 @@ exports.createSkill = asyncHandler(async (req, res) => {
     // Clean up uploaded files if something fails
     if (req.files) {
       try {
-        if (req.files.certificate) {
+        if (req.files.certificate && fs.existsSync(req.files.certificate[0].path)) {
           fs.unlinkSync(req.files.certificate[0].path);
         }
-        if (req.files.introVideo) {
+        if (req.files.introVideo && fs.existsSync(req.files.introVideo[0].path)) {
           fs.unlinkSync(req.files.introVideo[0].path);
         }
       } catch (cleanupErr) {
