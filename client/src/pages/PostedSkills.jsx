@@ -1,15 +1,19 @@
-import { useUser } from "@clerk/clerk-react"
+import { useUser, useAuth } from "@clerk/clerk-react"
+import { useState } from "react"
 import SkillCard from "@/components/SkillCard"
 import CTASection from "@/components/CTASection"
 import Pagination from "@/components/Pagination"
 import useSkills from "@/components/useSkills"
 import { BookOpen } from "lucide-react"
 import { useNavigate, Link } from "react-router-dom"
+import SkillsAPI from "@/components/SkillsAPI"
 
 export default function PostedSkills() {
   const { user, isLoaded } = useUser()
+  const { getToken } = useAuth()
   const navigate = useNavigate()
-  const { skills, loading, error, pagination, changePage } = useSkills()
+  const { skills, loading, error, pagination, changePage, refetch } = useSkills()
+  const [deletingId, setDeletingId] = useState(null)
 
   // Filter skills posted by the logged-in user
   const postedSkills = skills.filter(
@@ -20,6 +24,26 @@ export default function PostedSkills() {
   // Navigate to edit page using the correct route
   navigate(`/skills/${skillId}/edit`)
 }
+
+  const handleDelete = async (skillId) => {
+    const confirmation = window.confirm(
+      "Are you sure you want to delete this skill? This action cannot be undone."
+    )
+    if (!confirmation) return
+
+    setDeletingId(skillId)
+    try {
+      const token = await getToken()
+      await SkillsAPI.deleteSkill(skillId, token)
+      // refresh the list after successful deletion
+      await refetch()
+    } catch (err) {
+      console.error("Failed to delete skill", err)
+      alert(err.message || "Could not delete skill. Please try again.")
+    } finally {
+      setDeletingId(null)
+    }
+  }
 
 
   if (!isLoaded) {
@@ -60,7 +84,11 @@ export default function PostedSkills() {
             key={skill._id} 
             skill={skill} 
             showEditButton={true}
+            showDeleteButton={true}
             onEdit={handleEdit}
+            onDelete={handleDelete}
+            // if this card is currently being deleted, disable buttons
+            disabled={deletingId === skill._id}
           />
         ))}
       </div>

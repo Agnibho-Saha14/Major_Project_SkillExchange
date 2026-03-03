@@ -49,6 +49,24 @@ class SkillsAPI {
       skill.description.toLowerCase().includes(search)
     )
   }
+
+  // Delete a skill (requires authentication token)
+  static async deleteSkill(skillId, token) {
+    const headers = {}
+    if (token) headers.Authorization = `Bearer ${token}`
+
+    const response = await fetch(`${API_BASE_URL}/skills/${skillId}`, {
+      method: 'DELETE',
+      headers
+    })
+    const result = await response.json()
+
+    if (!result.success) {
+      throw new Error(result.message || 'Failed to delete skill')
+    }
+
+    return result
+  }
 }
 
 export default SkillsAPI

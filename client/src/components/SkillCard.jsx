@@ -1,12 +1,12 @@
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { IndianRupee, Clock, Users, Edit } from "lucide-react"
+import { IndianRupee, Clock, Users, Edit, Trash2 } from "lucide-react"
 import StarRating from "./starRating"
 import PriceDisplay from "./priceDisplay"
 import { useNavigate } from "react-router-dom"
 import { useUser } from "@clerk/clerk-react"
 
-export default function SkillCard({ skill, showEditButton = false, onEdit }) {
+export default function SkillCard({ skill, showEditButton = false, showDeleteButton = false, onEdit, onDelete, disabled = false }) {
   const { isSignedIn } = useUser();
   const navigate = useNavigate();
 
@@ -26,6 +26,12 @@ export default function SkillCard({ skill, showEditButton = false, onEdit }) {
     }
   }
 
+  function handleDelete() {
+    if (onDelete) {
+      onDelete(skill._id);
+    }
+  }
+
   return (
     <Card className="h-full hover:shadow-xl transition-all duration-300 border-0 bg-white/80 backdrop-blur-sm hover:bg-white group">
       <CardHeader className="pb-3">
@@ -42,9 +48,21 @@ export default function SkillCard({ skill, showEditButton = false, onEdit }) {
                 size="sm"
                 variant="outline"
                 onClick={handleEdit}
+                disabled={disabled}
                 className="h-6 w-6 p-0 rounded-full hover:bg-indigo-50"
               >
                 <Edit className="h-3 w-3 mr-0.5 text-gray-600 hover:text-indigo-600" />
+              </Button>
+            )}
+            {showDeleteButton && (
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={handleDelete}
+                disabled={disabled}
+                className="h-6 w-6 p-0 rounded-full hover:bg-red-50"
+              >
+                <Trash2 className="h-3 w-3 text-gray-600 hover:text-red-600" />
               </Button>
             )}
           </div>
@@ -91,10 +109,23 @@ export default function SkillCard({ skill, showEditButton = false, onEdit }) {
                 onClick={handleEdit}
                 variant="outline"
                 size="xs"
+                disabled={disabled}
                 className="text-indigo-600 hover:bg-indigo-50 flex items-center gap-2 border-0"
               >
                 <Edit className="h-3 w-3 p-1" />
                 Edit
+              </Button>
+            )}
+            {showDeleteButton && (
+              <Button
+                onClick={handleDelete}
+                variant="outline"
+                size="xs"
+                disabled={disabled}
+                className="text-red-600 hover:bg-red-50 flex items-center gap-2 border-0"
+              >
+                <Trash2 className="h-3 w-3 p-1" />
+                Delete
               </Button>
             )}
             <Button
