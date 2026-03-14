@@ -145,8 +145,7 @@ function InteractiveStarRating({ rating, onRatingChange, size = "lg" }) {
     </div>
   );
 }
-
-function RatingSection({ skillId, averageRating, totalRatings, onRatingUpdate, isOwnSkill, isEnrolled }) {
+function RatingSection({ skillId, averageRating, totalRatings, onRatingUpdate, isOwnSkill, isEnrolled, ratings = [] }) {
   const { getToken } = useAuth();
   const { user, isLoaded } = useUser();
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -255,7 +254,7 @@ function RatingSection({ skillId, averageRating, totalRatings, onRatingUpdate, i
         },
         body: JSON.stringify({
           rating: avgRating,
-          comment: formattedComment, // Send formatted comment
+          comment: formattedComment,
         }),
       });
 
@@ -265,19 +264,14 @@ function RatingSection({ skillId, averageRating, totalRatings, onRatingUpdate, i
         setHasRated(true);
         setExistingRating({
           rating: avgRating,
-          comment: formattedComment, // **FIX:** Use formatted comment for optimistic update
+          comment: formattedComment,
           createdAt: new Date()
         });
         setParameterRatings(initialParameterRatings);
         setUserComment("");
         onRatingUpdate(result.data);
       } else {
-        if (result.alreadyRated) {
-          setHasRated(true);
-          alert("You have already rated this skill.");
-        } else {
-          alert(result.message || "Failed to submit rating");
-        }
+        alert(result.message || "Failed to submit rating");
       }
     } catch (error) {
       console.error("Error submitting rating:", error);
@@ -310,6 +304,37 @@ function RatingSection({ skillId, averageRating, totalRatings, onRatingUpdate, i
           </div>
         </div>
 
+        {/* --- Public Feedback List --- */}
+        <div className="space-y-4 mt-6">
+          <h3 className="text-lg font-bold text-gray-900 border-b pb-2">Student Feedback</h3>
+          {ratings && ratings.length > 0 ? (
+            <div className="space-y-4 max-h-[400px] overflow-y-auto pr-2">
+              {[...ratings].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt)).map((r, index) => (
+                <div key={index} className="p-4 bg-white border border-gray-100 rounded-xl shadow-sm">
+                  <div className="flex justify-between items-start mb-2">
+                    <StarRating rating={r.rating} size="sm" showNumber={false} />
+                    <span className="text-xs text-gray-400">
+                      {new Date(r.createdAt).toLocaleDateString()}
+                    </span>
+                  </div>
+                  {r.comment && (
+                    <p className="text-gray-700 text-sm whitespace-pre-wrap italic">
+                      "{r.comment}"
+                    </p>
+                  )}
+                </div>
+              ))}
+            </div>
+          ) : (
+            <p className="text-gray-500 text-sm italic text-center py-4">
+              No reviews yet.
+            </p>
+          )}
+        </div>
+
+        <hr className="my-6 border-gray-100" />
+
+        {/* --- Rating Logic --- */}
         {checkingRating && (isEnrolled || hasRated) && (
           <div className="flex items-center justify-center p-4">
             <Loader2 className="h-5 w-5 animate-spin text-indigo-600 mr-2" />
@@ -412,7 +437,7 @@ function RatingSection({ skillId, averageRating, totalRatings, onRatingUpdate, i
                     <Textarea
                       value={userComment}
                       onChange={(e) => setUserComment(e.target.value)}
-                      placeholder="Share your overall experience (this will be submitted along with the detailed breakdown)..."
+                      placeholder="Share your overall experience..."
                       rows={3}
                       className="resize-none rounded-xl border-2 border-gray-200 focus:border-indigo-500"
                     />
@@ -432,11 +457,6 @@ function RatingSection({ skillId, averageRating, totalRatings, onRatingUpdate, i
                       'Submit 10-Parameter Rating'
                     )}
                   </Button>
-                  {!allRated && (
-                    <p className="text-center text-xs text-red-500 mt-2">
-                      Please provide a rating (1-5) for **all 10 parameters** before submitting.
-                    </p>
-                  )}
                 </div>
               </>
             </div>
@@ -1240,6 +1260,7 @@ const handleCompleteModule = useCallback(async (moduleId, moduleTitle) => {
               skillId={skill._id}
               averageRating={skill.averageRating || 0}
               totalRatings={skill.totalRatings || 0}
+              ratings={skill.ratings || []} 
               onRatingUpdate={handleRatingUpdate}
               isOwnSkill={isOwnSkill}
               isEnrolled={isEnrolled}
