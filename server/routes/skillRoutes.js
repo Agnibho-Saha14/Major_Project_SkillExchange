@@ -1,5 +1,6 @@
 const express = require('express');
 const { upload, validateFileSize, handleMulterError } = require('../config/multerConfig');
+const Skill = require('../models/Skill');
 const {
   getSkills,
   getSkillById,
@@ -19,7 +20,32 @@ const router = express.Router();
 
 // List + filters + pagination
 router.get('/', getSkills);
+router.get('/chatbot-context', async (req, res) => {
+  try {
+    const skills = await Skill.find({ status: "published" });
 
+    const formatted = skills.map(skill => ({
+      title: skill.title,
+      description: skill.description,
+      category: skill.category,
+      level: skill.level,
+      instructor: skill.instructor,
+      duration: skill.duration,
+      timePerWeek: skill.timePerWeek,
+      paymentOptions: skill.paymentOptions,
+      exchangeFor: skill.exchangeFor || null,
+      averageRating: skill.averageRating || 0,
+      totalRatings: skill.totalRatings || 0,
+      tags: skill.tags || []
+    }));
+
+    res.json(formatted);
+
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Failed to load chatbot data" });
+  }
+});
 // Get user's own skills
 router.get('/my-skills', getMySkills);
 
@@ -43,7 +69,6 @@ router.get('/:id/my-rating', getUserRating);
 // Publish
 router.patch('/:id/publish', publishSkill);
 
-// Get skill for editing (must be before /:id to avoid route conflicts)
 router.get('/:id/edit', getSkillForEdit);
 
 // CRUD by id

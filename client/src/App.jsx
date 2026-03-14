@@ -1,6 +1,6 @@
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom" 
 import "./App.css"
-
+import AIChatbot from "./components/AIChatbot"
 // Pages
 import HomePage from "./pages/Homepage"
 import BrowseSkillsPage from "./pages/BrowseSkillsPage"
@@ -40,7 +40,7 @@ export default function App() {
         <Route path="/signup" element={<Signup/>} />
         
       </Routes>
-      
+    <AIChatbot/>
     </Router>
   )
 }
