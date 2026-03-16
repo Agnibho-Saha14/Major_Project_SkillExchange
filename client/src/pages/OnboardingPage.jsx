@@ -3,17 +3,14 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "../components/ui/button";
 import { Input } from "../components/ui/input";
-import { Badge } from "../components/ui/badge";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../components/ui/card";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../components/ui/select";
-import { X, Plus, Sparkles } from "lucide-react";
+import { X, Sparkles, PlusCircle } from "lucide-react";
 
-// You can customize this list based on your platform's main categories
-const POPULAR_SKILLS = [
-  "Web Development", "Python", "React", "Machine Learning",
-  "UI/UX Design", "Graphic Design", "Digital Marketing",
-  "Data Analysis", "Photography", "Public Speaking",
-  "Video Editing", "SEO", "Blockchain", "Content Writing"
+// Updated with a diverse mix of tech and creative skills
+const SUGGESTED_SKILLS = [
+  "Python", "Machine Learning", "Data Structures", 
+  "React", "Algorithms", "UI/UX Design", 
+  "Interior Design", "Photography", "Database Management", 
+  "Japanese", "Digital Marketing", "Content Writing"
 ];
 
 export default function OnboardingPage() {
@@ -45,7 +42,7 @@ export default function OnboardingPage() {
     setSkills(skills.filter(skill => skill !== skillToRemove));
   };
 
-  const togglePopularSkill = (skill) => {
+  const toggleSuggestedSkill = (skill) => {
     if (skills.includes(skill)) {
       removeSkill(skill);
     } else {
@@ -63,17 +60,14 @@ export default function OnboardingPage() {
 
     setIsLoading(true);
     try {
-      // ONLY update the metadata, completely skip the name
       await user?.update({
         unsafeMetadata: {
           onboardingComplete: true,
           savedSkills: skills 
         }
       });
-
       await user?.reload();
       navigate("/");
-      
     } catch (err) {
       console.error("Error during onboarding:", err);
       const clerkError = err.errors?.[0]?.longMessage || err.message;
@@ -84,126 +78,105 @@ export default function OnboardingPage() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50/50 p-4">
-      <Card className="w-full max-w-xl shadow-lg border-gray-200">
-        <CardHeader className="text-center pb-6">
-          <div className="mx-auto bg-primary/10 w-12 h-12 flex items-center justify-center rounded-full mb-4">
-            <Sparkles className="text-primary w-6 h-6" />
-          </div>
-          <CardTitle className="text-3xl font-bold tracking-tight">Personalize Your Feed</CardTitle>
-          <CardDescription className="text-base mt-2">
-            What do you want to learn or share? Select at least 3 skills to help us curate your perfect dashboard.
-          </CardDescription>
-        </CardHeader>
+    <div className="min-h-screen bg-white flex flex-col items-center pt-24 px-6 font-sans">
+      <div className="w-full max-w-2xl space-y-10">
         
-        <CardContent>
-          <form onSubmit={handleCompleteOnboarding} className="space-y-8">
-            
-            {/* 1. Quick Select: Popular Skills Cloud */}
-            <div>
-              <h3 className="text-sm font-semibold mb-3 text-gray-700">Popular Interests</h3>
-              <div className="flex flex-wrap gap-2">
-                {POPULAR_SKILLS.slice(0, 10).map(skill => {
-                  const isSelected = skills.includes(skill);
-                  return (
-                    <Badge
-                      key={skill}
-                      variant={isSelected ? "default" : "outline"}
-                      className={`cursor-pointer transition-all py-1.5 px-3 text-sm font-medium ${
-                        isSelected 
-                          ? 'bg-blue-600 hover:bg-blue-700 text-white shadow-sm' 
-                          : 'hover:border-blue-400 hover:bg-blue-50 text-gray-600'
-                      }`}
-                      onClick={() => togglePopularSkill(skill)}
-                    >
-                      {skill}
-                      {isSelected && <X className="ml-1.5 h-3 w-3 inline" />}
-                    </Badge>
-                  );
-                })}
-              </div>
+        {/* Header Section */}
+        <div className="text-center space-y-4">
+          <div className="mx-auto w-14 h-14 bg-zinc-100 rounded-2xl flex items-center justify-center mb-6">
+            <Sparkles className="text-zinc-900 w-7 h-7" />
+          </div>
+          <h1 className="text-4xl font-extrabold tracking-tight text-zinc-900">
+            What are your interests?
+          </h1>
+          <p className="text-lg text-zinc-500 max-w-lg mx-auto">
+            Select at least 3 skills you want to learn or share to help us curate your perfect dashboard.
+          </p>
+        </div>
+
+        <form onSubmit={handleCompleteOnboarding} className="space-y-10">
+          
+          {/* Unified Input Section */}
+          <div className="relative group">
+            <div className="absolute inset-y-0 left-4 flex items-center pointer-events-none">
+              <PlusCircle className="h-5 w-5 text-zinc-400 group-focus-within:text-zinc-900 transition-colors" />
             </div>
+            <Input 
+              type="text" 
+              value={currentSkill} 
+              onChange={(e) => setCurrentSkill(e.target.value)}
+              onKeyDown={onInputKeyDown}
+              placeholder="Type any skill and press enter..."
+              className="pl-12 py-7 text-lg rounded-2xl border-zinc-200 bg-zinc-50/50 focus-visible:ring-zinc-900 focus-visible:bg-white shadow-sm transition-all"
+            />
+          </div>
 
-            {/* 2. Dropdown & Custom Input */}
-            <div className="space-y-3">
-              <h3 className="text-sm font-semibold text-gray-700">Add Specific Skills</h3>
-              <div className="flex flex-col sm:flex-row gap-3">
-                
-                {/* Select Dropdown */}
-                <Select onValueChange={(val) => handleAddSkill(val)}>
-                  <SelectTrigger className="w-full sm:w-[200px]">
-                    <SelectValue placeholder="Browse categories..." />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {POPULAR_SKILLS.map(skill => (
-                      <SelectItem key={skill} value={skill}>{skill}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-
-                {/* Custom Type Input */}
-                <div className="flex-1 flex gap-2">
-                  <Input 
-                    type="text" 
-                    value={currentSkill} 
-                    onChange={(e) => setCurrentSkill(e.target.value)}
-                    onKeyDown={onInputKeyDown}
-                    placeholder="Type any skill & press enter..."
-                    className="flex-1"
-                  />
-                  <Button 
-                    type="button" 
-                    variant="secondary"
-                    onClick={() => handleAddSkill(currentSkill)}
-                    className="shrink-0"
-                  >
-                    <Plus className="h-4 w-4 mr-1" /> Add
-                  </Button>
-                </div>
-              </div>
-            </div>
-
-            {/* 3. Final Selected Skills Display Basket */}
-            <div className="bg-gray-100/50 p-4 rounded-lg border border-gray-200 min-h-[100px]">
-              <div className="flex justify-between items-center mb-3">
-                <h3 className="text-sm font-medium text-gray-700">Your Selections</h3>
-                <span className={`text-xs font-bold px-2 py-1 rounded-full ${skills.length >= 3 ? 'bg-green-100 text-green-700' : 'bg-gray-200 text-gray-500'}`}>
+          {/* User's Selected Skills (The Basket) */}
+          {skills.length > 0 && (
+            <div className="animate-in fade-in slide-in-from-bottom-2 duration-300">
+              <div className="flex items-center justify-between mb-3">
+                <span className="text-sm font-semibold text-zinc-900 uppercase tracking-wider">Your Selections</span>
+                <span className={`text-sm font-medium ${skills.length >= 3 ? 'text-emerald-600' : 'text-zinc-400'}`}>
                   {skills.length}/3 minimum
                 </span>
               </div>
-              
-              {skills.length === 0 ? (
-                <p className="text-sm text-gray-400 italic text-center py-2">No skills selected yet.</p>
-              ) : (
-                <div className="flex flex-wrap gap-2">
-                  {skills.map(skill => (
-                    <Badge key={skill} variant="secondary" className="pl-3 pr-2 py-1.5 flex items-center gap-1 bg-white border border-gray-300 shadow-sm text-gray-800 text-sm">
-                      {skill}
-                      <button 
-                        type="button" 
-                        onClick={() => removeSkill(skill)}
-                        className="text-gray-400 hover:text-red-500 hover:bg-red-50 focus:outline-none rounded-full p-0.5 transition-colors ml-1"
-                      >
-                        <X className="h-3.5 w-3.5" />
-                      </button>
-                    </Badge>
-                  ))}
-                </div>
-              )}
+              <div className="flex flex-wrap gap-2.5 p-5 bg-zinc-50 border border-zinc-100 rounded-2xl min-h-[80px]">
+                {skills.map(skill => (
+                  <button
+                    key={skill}
+                    type="button"
+                    onClick={() => removeSkill(skill)}
+                    className="group flex items-center gap-2 bg-zinc-900 text-white px-4 py-2 rounded-xl text-sm font-medium transition-all hover:bg-red-600 hover:shadow-md"
+                  >
+                    {skill}
+                    <X className="h-4 w-4 text-zinc-400 group-hover:text-white transition-colors" />
+                  </button>
+                ))}
+              </div>
             </div>
+          )}
 
-            {error && <p className="text-red-500 text-sm font-medium text-center bg-red-50 p-2 rounded">{error}</p>}
+          {/* Suggested Skills Cloud */}
+          <div>
+            <span className="text-sm font-semibold text-zinc-900 uppercase tracking-wider block mb-4">Popular Suggestions</span>
+            <div className="flex flex-wrap gap-3">
+              {SUGGESTED_SKILLS.map(skill => {
+                const isSelected = skills.includes(skill);
+                // We hide it from suggestions if they already picked it so the screen doesn't look cluttered
+                if (isSelected) return null; 
+                
+                return (
+                  <button
+                    key={skill}
+                    type="button"
+                    onClick={() => toggleSuggestedSkill(skill)}
+                    className="px-4 py-2 rounded-xl text-sm font-medium border border-zinc-200 text-zinc-600 bg-white hover:border-zinc-900 hover:text-zinc-900 transition-all shadow-sm"
+                  >
+                    + {skill}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
 
+          {error && (
+            <div className="bg-red-50 text-red-600 text-sm font-medium p-4 rounded-xl text-center border border-red-100">
+              {error}
+            </div>
+          )}
+
+          {/* Submit Action */}
+          <div className="pt-4 border-t border-zinc-100">
             <Button 
               type="submit" 
-              className="w-full text-base py-6 bg-blue-600 hover:bg-blue-700 transition-colors" 
+              className="w-full py-7 text-lg rounded-2xl bg-zinc-900 hover:bg-zinc-800 text-white shadow-lg transition-all" 
               disabled={skills.length < 3 || isLoading}
             >
-              {isLoading ? "Curating your dashboard..." : "Complete Setup"}
+              {isLoading ? "Curating your experience..." : "Finish Setup"}
             </Button>
-          </form>
-        </CardContent>
-      </Card>
+          </div>
+        </form>
+      </div>
     </div>
   );
 }
