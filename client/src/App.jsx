@@ -13,34 +13,32 @@ import ContactInstructor from "./pages/ContactInstructor"
 import ProtectedRoute from "./ProtectedRoute"
 import EditSkillPage from './pages/EditSkills'
 import PaymentSuccess from "./pages/PaymentSuccess"
-
+import OnboardingPage from "./pages/OnboardingPage"
 import ProposeExchangePage from "./pages/ProposeExchangePage" 
 
 export default function App() {
   return (
     <Router>
       <Routes>
-        <Route path="/" element={<HomePage />} />
+        {/* PUBLIC ROUTES */}
         <Route path="/browse" element={<BrowseSkillsPage />} />
+        <Route path="/login" element={<Login/>} />
+        <Route path="/signup" element={<Signup/>} />
         
+        {/* PROTECTED ROUTES */}
         <Route element={<ProtectedRoute/>}>
+          <Route path="/" element={<HomePage />} />
           <Route path="/publish" element={<PublishSkillPage />} />
           <Route path="/dashboard" element={<DashboardPage />} />
           <Route path="/skills/:id" element={<SkillDetailPage />} />
           <Route path="/contact" element={<ContactInstructor/>}/>
           <Route path="/skills/:id/edit" element={<EditSkillPage />} />
           <Route path="/payment-success/" element={<PaymentSuccess/>}/>
-          
-    
-          <Route path="/propose-exchange" element={<ProposeExchangePage />} /> 
+          <Route path="/onboarding" element={<OnboardingPage />}/>
+          <Route path="/propose-exchange" element={<ProposeExchangePage />}/> 
         </Route>
-
-        
-        <Route path="/login" element={<Login/>} />
-        <Route path="/signup" element={<Signup/>} />
-        
       </Routes>
-    <AIChatbot/>
+      <AIChatbot/>
     </Router>
   )
 }
