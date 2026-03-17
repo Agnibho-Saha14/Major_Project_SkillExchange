@@ -8,6 +8,7 @@ const paymentRoutes = require('./routes/paymentRoutes');
 const categoryRoutes = require('./routes/categoryRoutes');
 const healthRoutes = require('./routes/healthRoutes');
 const exchangeRoutes = require('./routes/exchangeRoutes');
+const userRoutes = require('./routes/userRoutes');
 
 const app = express();
 
@@ -33,6 +34,7 @@ app.use('/api', paymentRoutes);
 app.use('/api/categories', categoryRoutes);
 app.use('/api/health', healthRoutes);
 app.use('/api/exchange', exchangeRoutes);
+app.use('/api/users', userRoutes);
 
 // ⭐ Serve static files from uploads directory
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
