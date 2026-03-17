@@ -9,6 +9,9 @@ import ProposalsDashboard from "./ProposalsDashboard"// ADDED: Import the new co
 export default function DashboardPage() {
   const [tab, setTab] = useState("posted")
   const { user, isLoaded } = useUser()
+  // if (isLoaded && user) {
+  //   console.log("Your Clerk User ID is:", user.id);
+  // }
 
   if (!isLoaded) {
     return (
