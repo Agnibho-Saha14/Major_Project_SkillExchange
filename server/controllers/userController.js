@@ -39,7 +39,11 @@ exports.onboardUser = asyncHandler(async (req, res, next) => {
 // 1. Fetch All User IDs for Batch Processing
 exports.getAllUserIdsForML = asyncHandler(async (req, res) => {
   try {
-    const users = await clerkClient.users.getUserList();
+    // Add the { limit: 500 } parameter here!
+    // If you expect more than 500 users, you will need to implement offset pagination.
+    const users = await clerkClient.users.getUserList({
+      limit: 500 
+    });
     
     // Support for Clerk SDK v4 and v5 structures
     const userList = users.data ? users.data : users; 
