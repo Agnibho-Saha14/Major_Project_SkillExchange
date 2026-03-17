@@ -1,7 +1,5 @@
 // server/controllers/userController.js
 const asyncHandler = require('../utils/asyncHandler');
-// Depending on your exact Clerk version, clerkClient comes from either of these packages. 
-// Since you have both in package.json, this is the standard import:
 const { clerkClient } = require('@clerk/clerk-sdk-node'); 
 
 exports.onboardUser = asyncHandler(async (req, res, next) => {
@@ -14,38 +12,81 @@ exports.onboardUser = asyncHandler(async (req, res, next) => {
     });
   }
 
-  // ==========================================
-  // 🔌 THE OUT PORT FOR THE ML ENGINEER
-  // ==========================================
-  console.log("Data ready for ML Engineer:", skills);
-  
-  // When the ML engineer is ready, they will give you an endpoint URL.
-  // You will forward the `skills` array to them using fetch or axios like this:
-  // const mlResponse = await fetch('http://ml-server.yourdomain.com/recommend', {
-  //   method: 'POST',
-  //   body: JSON.stringify({ skills })
-  // });
-  // const curatedHomeData = await mlResponse.json();
-  
-  // For now, let's mock what the ML engineer will return so you can keep building:
+  // Fallback ML mock data
   const mockCuratedHomeData = [
     `Course matching: ${skills[0]}`,
     "Trending Skill 1",
     "Community group match"
   ];
-  // ==========================================
 
-  // Update Clerk Metadata so the frontend ProtectedRoute knows they finished onboarding
   await clerkClient.users.updateUserMetadata(userId, {
     publicMetadata: {
       onboardingComplete: true,
-      curatedHomeData: mockCuratedHomeData // Storing the ML response inside Clerk
+      curatedHomeData: mockCuratedHomeData
     }
   });
 
-  // Return success to the frontend Onboarding page
   res.status(200).json({ 
     success: true, 
     curatedData: mockCuratedHomeData 
   });
+});
+
+// ==========================================
+// 🧠 ML ENGINEER ENDPOINTS
+// ==========================================
+
+// 1. Fetch All User IDs for Batch Processing
+exports.getAllUserIdsForML = asyncHandler(async (req, res) => {
+  try {
+    const users = await clerkClient.users.getUserList();
+    
+    // Support for Clerk SDK v4 and v5 structures
+    const userList = users.data ? users.data : users; 
+    const userIds = userList.map(u => u.id);
+
+    res.status(200).json({
+      success: true,
+      totalUsers: userIds.length,
+      userIds: userIds
+    });
+  } catch (error) {
+    console.error("Fetch All Users Error:", error);
+    res.status(500).json({ success: false, message: "Failed to fetch user IDs from Clerk" });
+  }
+});
+
+// 2. Fetch Skills for a specific User ID
+exports.getUserSkillsForML = asyncHandler(async (req, res) => {
+  const { userId } = req.params;
+
+  if (!userId) {
+    return res.status(400).json({ 
+      success: false, 
+      message: "User ID is required in the URL parameters" 
+    });
+  }
+
+  try {
+    const clerkUser = await clerkClient.users.getUser(userId);
+
+    // Grab skills from unsafeMetadata where the new frontend saves them
+    const skills = clerkUser.unsafeMetadata?.savedSkills || [];
+    const name = clerkUser.firstName || clerkUser.fullName || "SkillExchange User";
+
+    res.status(200).json({
+      success: true,
+      userId: clerkUser.id,
+      name: name,
+      skills: skills,
+      count: skills.length
+    });
+
+  } catch (error) {
+    console.error(`ML Endpoint Error for user ${userId}:`, error.message);
+    res.status(404).json({ 
+      success: false, 
+      message: "User not found in database or error fetching metadata." 
+    });
+  }
 });

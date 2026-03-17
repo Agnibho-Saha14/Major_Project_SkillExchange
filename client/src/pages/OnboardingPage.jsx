@@ -77,9 +77,10 @@ export default function OnboardingPage() {
 
     setIsLoading(true);
     try {
+      // Direct frontend update - incredibly fast and no backend loops!
       await user?.update({
         unsafeMetadata: {
-          ...user.unsafeMetadata,
+          ...user.unsafeMetadata, // preserve any other metadata
           onboardingComplete: true,
           savedSkills: skills,
           lastUpdated: new Date().toISOString()
@@ -87,7 +88,7 @@ export default function OnboardingPage() {
       });
 
       await user?.reload();
-      navigate("/");
+      navigate("/", { replace: true });
     } catch (err) {
       console.error("Onboarding Error:", err);
       setError("Something went wrong saving your preferences.");
@@ -150,7 +151,7 @@ export default function OnboardingPage() {
           />
         </div>
 
-        {/* Selected Skills Basket (Only shows if skills exist) */}
+        {/* Selected Skills Basket */}
         {skills.length > 0 && (
           <div className="max-w-xl mx-auto animate-in fade-in duration-300">
             <div className="flex flex-wrap gap-2.5 p-6 bg-white border border-zinc-200 rounded-2xl shadow-sm min-h-[90px]">
@@ -207,7 +208,7 @@ export default function OnboardingPage() {
 
       </div>
 
-      {/* Floating Action Bar (Appears when 3 skills are selected) */}
+      {/* Floating Action Bar */}
       <div 
         className={`fixed bottom-0 left-0 right-0 p-6 bg-white/80 backdrop-blur-md border-t border-zinc-200 transform transition-all duration-500 ease-in-out flex justify-center z-50
           ${isReady ? 'translate-y-0 opacity-100' : 'translate-y-full opacity-0'}
