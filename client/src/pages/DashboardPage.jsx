@@ -4,6 +4,7 @@ import Navbar from "../components/Navbar"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import PostedSkills from "./PostedSkills"
 import EnrolledSkills from "./EnrolledSkills" 
+import PreferencesEditor from "../components/PreferencesEditor";
 import ProposalsDashboard from "./ProposalsDashboard"// ADDED: Import the new component
 
 export default function DashboardPage() {
@@ -40,6 +41,7 @@ export default function DashboardPage() {
             <TabsTrigger value="posted">My Posted Skills</TabsTrigger>
             <TabsTrigger value="enrolled">Enrolled Skills</TabsTrigger>
             <TabsTrigger value="proposals">Exchange Proposals</TabsTrigger>
+            <TabsTrigger value="preferences">AI Preferences</TabsTrigger>
           </TabsList>
 
           <TabsContent value="posted">
@@ -52,6 +54,11 @@ export default function DashboardPage() {
           </TabsContent>
           <TabsContent value="proposals">
             <ProposalsDashboard />
+          </TabsContent>
+          <TabsContent value="preferences">
+            <div className="max-w-4xl">
+              <PreferencesEditor />
+            </div>
           </TabsContent>
         </Tabs>
       </div>

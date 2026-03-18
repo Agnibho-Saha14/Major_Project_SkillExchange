@@ -61,7 +61,7 @@ exports.onboardUser = asyncHandler(async (req, res, next) => {
 
 
 // ==========================================
-// 🧠 BATCH ML ENGINEER ENDPOINTS
+// 🧠 BATCH ML ENDPOINTS
 // ==========================================
 
 // 1. Fetch All User IDs for Batch Processing

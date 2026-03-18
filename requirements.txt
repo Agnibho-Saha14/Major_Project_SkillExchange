@@ -4,3 +4,4 @@ numpy
 requests
 flask
 flask-cors
+rank-bm25

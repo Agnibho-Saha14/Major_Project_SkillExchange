@@ -18,7 +18,7 @@ export default function HomePage() {
   useEffect(() => {
     const fetchAllSkills = async () => {
       try {
-        const response = await fetch("http://localhost:5000/api/skills");
+        const response = await fetch("http://localhost:5000/api/skills?limit=500");
         const data = await response.json();
         if (data.success) {
           setAllSkills(data.data);
@@ -38,9 +38,9 @@ export default function HomePage() {
   // Extract the titles the Python script saved to Clerk
   const recommendedTitles = user?.publicMetadata?.recommendedCourses || [];
   
-  // Filter the full DB objects based on the recommended string titles
-  const recommendedSkills = allSkills
-    .filter(skill => recommendedTitles.includes(skill.title))
+  const recommendedSkills = recommendedTitles
+    .map(title => allSkills.find(skill => skill.title === title))
+    .filter(skill => skill !== undefined) // Safely remove any if a course was deleted
     .slice(0, 6);
 
   return (
