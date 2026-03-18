@@ -77,18 +77,32 @@ export default function OnboardingPage() {
 
     setIsLoading(true);
     try {
-      // Direct frontend update - incredibly fast and no backend loops!
+      // 1. Direct frontend update to instantly clear the onboarding loop
       await user?.update({
         unsafeMetadata: {
-          ...user.unsafeMetadata, // preserve any other metadata
+          ...user.unsafeMetadata,
           onboardingComplete: true,
           savedSkills: skills,
           lastUpdated: new Date().toISOString()
         }
       });
 
+      // 2. 🔥 THE MISSING LINK: Ping the Node backend to trigger the ML Pipeline!
+      await fetch("http://localhost:5000/api/users/onboard", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ 
+          userId: user.id, 
+          skills: skills 
+        })
+      });
+
+      // 3. Reload the user so React grabs the new AI recommendations from publicMetadata
       await user?.reload();
+      
+      // 4. Send them to the populated dashboard
       navigate("/", { replace: true });
+      
     } catch (err) {
       console.error("Onboarding Error:", err);
       setError("Something went wrong saving your preferences.");
