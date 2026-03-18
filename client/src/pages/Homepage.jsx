@@ -1,4 +1,3 @@
-// client/src/pages/Homepage.jsx
 import { useState, useEffect } from "react"
 import { useUser } from "@clerk/clerk-react"
 import { Button } from "@/components/ui/button"
@@ -7,7 +6,7 @@ import { Link } from "react-router-dom"
 import UserPostedSkills from "./UserPostedSkills"
 import Navbar from "../components/Navbar"
 import CTASection from "@/components/CTASection"
-import SkillCard from "../components/SkillCard" // Make sure this path is correct
+import SkillCard from "../components/SkillCard"
 
 export default function HomePage() {
   const { user, isSignedIn } = useUser();
@@ -67,7 +66,7 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* 🔥 NEW: ML Recommended Section */}
+      {/* ML Recommended Section */}
       {isSignedIn && recommendedSkills.length > 0 && !loadingRecommended && (
         <section className="py-16 bg-white border-y border-indigo-50">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">

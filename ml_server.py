@@ -52,9 +52,6 @@ def hybrid_rank_courses(user_topics, courses, top_n=6):
 
     user_query_str = " ".join(user_topics).lower()
 
-    # ==========================================
-    # Phase 1: Semantic Search (Sentence Transformers)
-    # ==========================================
     # Embed the user query and all course texts
     query_embedding = model.encode([user_query_str])
     course_embeddings = model.encode(rich_texts)
@@ -66,9 +63,6 @@ def hybrid_rank_courses(user_topics, courses, top_n=6):
     if max(semantic_scores) > 0:
         semantic_scores = (semantic_scores - min(semantic_scores)) / (max(semantic_scores) - min(semantic_scores))
 
-    # ==========================================
-    # Phase 2: Lexical Search (Exact Keyword Match via BM25)
-    # ==========================================
     # Tokenize the texts for BM25 (split into lists of words)
     tokenized_corpus = [text.split() for text in rich_texts]
     bm25 = BM25Okapi(tokenized_corpus)
@@ -81,9 +75,6 @@ def hybrid_rank_courses(user_topics, courses, top_n=6):
     if max(bm25_scores) > 0:
         bm25_scores = (bm25_scores - min(bm25_scores)) / (max(bm25_scores) - min(bm25_scores))
 
-    # ==========================================
-    # Phase 3: Hybrid Fusion (Combining the Scores)
-    # ==========================================
     scored_courses = []
     for idx, course in enumerate(courses):
         # We weight exact keyword matches slightly higher (60%) than AI vibes (40%)
@@ -105,14 +96,14 @@ def generate_recommendations():
         return jsonify({"success": False, "message": "Missing userId or skills"}), 400
 
     try:
-        print(f"\n🧠 Generating Hybrid recommendations for {user_topics}...")
+        print(f"\n Generating Hybrid recommendations for {user_topics}...")
         
         all_courses = fetch_all_courses()
         
         # Run the Hybrid ranking algorithm
         top_courses = hybrid_rank_courses(user_topics, all_courses, top_n=6)
 
-        print(f"🎯 Recommended: {top_courses}")
+        print(f" Recommended: {top_courses}")
         return jsonify({"success": True, "recommendedTitles": top_courses})
 
     except Exception as e:

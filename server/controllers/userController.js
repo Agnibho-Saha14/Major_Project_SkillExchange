@@ -1,10 +1,6 @@
-// server/controllers/userController.js
 const asyncHandler = require('../utils/asyncHandler');
 const { clerkClient } = require('@clerk/clerk-sdk-node'); 
 
-// ==========================================
-// 🚀 MAIN ONBOARDING & REAL-TIME ML PING
-// ==========================================
 exports.onboardUser = asyncHandler(async (req, res, next) => {
   const { userId, skills } = req.body;
 
@@ -38,13 +34,9 @@ exports.onboardUser = asyncHandler(async (req, res, next) => {
     }
   } catch (error) {
     console.error("⚠️ ML Server is down or unreachable. Skipping live recommendations.");
-    // We don't throw an error here so the user can still finish onboarding 
-    // even if the Python server crashes.
   }
 
-  // ==========================================
   // UPDATE CLERK WITH SKILLS & RECOMMENDATIONS
-  // ==========================================
   await clerkClient.users.updateUserMetadata(userId, {
     publicMetadata: {
       onboardingComplete: true,
@@ -59,20 +51,14 @@ exports.onboardUser = asyncHandler(async (req, res, next) => {
   });
 });
 
-
-// ==========================================
-// 🧠 BATCH ML ENDPOINTS
-// ==========================================
-
+// BATCH ML ENDPOINTS
 // 1. Fetch All User IDs for Batch Processing
 exports.getAllUserIdsForML = asyncHandler(async (req, res) => {
   try {
-    // limit: 500 fixes the pagination issue where it only returned 10 users!
     const users = await clerkClient.users.getUserList({
       limit: 500 
     });
     
-    // Support for Clerk SDK v4 and v5 structures
     const userList = users.data ? users.data : users; 
     const userIds = userList.map(u => u.id);
 
@@ -124,7 +110,6 @@ exports.getUserSkillsForML = asyncHandler(async (req, res) => {
 });
 
 
-// 3. Inject Endpoint for ML Engineer to push batch recommendations
 exports.saveMLRecommendations = asyncHandler(async (req, res) => {
   const { userId } = req.params;
   const { recommendedTitles } = req.body;
