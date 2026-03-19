@@ -1,11 +1,47 @@
+import { useState, useEffect } from "react"
+import { useUser } from "@clerk/clerk-react"
 import { Button } from "@/components/ui/button"
-import { Search, ArrowRight, BookOpen } from "lucide-react"
+import { Search, ArrowRight, BookOpen, Sparkles } from "lucide-react"
 import { Link } from "react-router-dom"
-import  UserPostedSkills  from "./UserPostedSkills"
+import UserPostedSkills from "./UserPostedSkills"
 import Navbar from "../components/Navbar"
 import CTASection from "@/components/CTASection"
+import SkillCard from "../components/SkillCard"
 
 export default function HomePage() {
+  const { user, isSignedIn } = useUser();
+  const [allSkills, setAllSkills] = useState([]);
+  const [loadingRecommended, setLoadingRecommended] = useState(true);
+
+  // Fetch all skills to match against ML recommendations
+  useEffect(() => {
+    const fetchAllSkills = async () => {
+      try {
+        const response = await fetch("http://localhost:5000/api/skills?limit=500");
+        const data = await response.json();
+        if (data.success) {
+          setAllSkills(data.data);
+        }
+      } catch (error) {
+        console.error("Failed to fetch skills for recommendations", error);
+      } finally {
+        setLoadingRecommended(false);
+      }
+    };
+
+    if (isSignedIn) {
+      fetchAllSkills();
+    }
+  }, [isSignedIn]);
+
+  // Extract the titles the Python script saved to Clerk
+  const recommendedTitles = user?.publicMetadata?.recommendedCourses || [];
+  
+  const recommendedSkills = recommendedTitles
+    .map(title => allSkills.find(skill => skill.title === title))
+    .filter(skill => skill !== undefined) // Safely remove any if a course was deleted
+    .slice(0, 6);
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
       <Navbar />
@@ -30,6 +66,29 @@ export default function HomePage() {
         </div>
       </section>
 
+      {/* ML Recommended Section */}
+      {isSignedIn && recommendedSkills.length > 0 && !loadingRecommended && (
+        <section className="py-16 bg-white border-y border-indigo-50">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div className="flex justify-between items-center mb-12">
+              <div>
+                <div className="flex items-center gap-2 mb-2">
+                  <Sparkles className="h-6 w-6 text-indigo-600" />
+                  <h2 className="text-3xl font-bold text-gray-900">Recommended for You</h2>
+                </div>
+                <p className="text-lg text-gray-600">Curated by our AI based on your onboarding interests</p>
+              </div>
+            </div>
+            
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+              {recommendedSkills.map(skill => (
+                <SkillCard key={skill._id} skill={skill} />
+              ))}
+            </div>
+          </div>
+        </section>
+      )}
+
       {/* Top Rated Skills */}
       <section className="py-16 bg-gray-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -42,13 +101,12 @@ export default function HomePage() {
               <Link to="/browse">View All<ArrowRight className="ml-2 h-4 w-4" /></Link>
             </Button>
           </div>
+          
           <UserPostedSkills limit={6} sort="rating" />
-          { <CTASection/>}
+          <CTASection/>
         </div>
-        
       </section>
             
-
     </div>
   )
 }
